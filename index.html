@@ -29,8 +29,9 @@ button,.b{background:#2c3342;color:#e6e8ee;border:1px solid #444c60;border-radiu
 button:hover{background:#3a4358}button:disabled{opacity:.4;cursor:default}.big{font-size:1.5em;padding:.5em 1.2em;background:#2563c8}.red{background:#a33}
 .pc{border:1px solid #333;border-radius:6px;padding:5px;margin-bottom:6px}.pc.cur{border-color:#7cf;background:#1c2433}.pc.out{opacity:.4}
 .chip{display:inline-block;padding:0 4px;margin:1px;border-radius:3px;color:#000;font-size:11px}
-#modal,#start{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:5}
+#modal,#start,#cf{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:5}
 .mc{background:#1d212b;border:1px solid #555;border-radius:8px;padding:14px;max-width:640px;max-height:90vh;overflow:auto;min-width:320px}
+#cf{z-index:8}
 #toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#245;padding:8px 14px;border-radius:6px;display:none;z-index:9;max-width:70vw}
 #toast.e{background:#722}input,select{background:#12141a;color:#e6e8ee;border:1px solid #555;border-radius:4px;padding:4px}
 table{border-collapse:collapse}td{padding:2px 8px;border-bottom:1px solid #333}.log div{border-bottom:1px solid #222;padding:2px 0}
@@ -38,7 +39,7 @@ table{border-collapse:collapse}td{padding:2px 8px;border-bottom:1px solid #333}.
 <div id=bw><div id=board><div id=grid></div><div id=ctr><div class=card style="left:6%;top:9%;transform:rotate(35deg)">CHANCE</div><div class=card style="right:6%;bottom:9%;transform:rotate(35deg)">COMMUNITY CHEST</div><h1>PROPERTY TYCOON</h1>
 <div id=dice><div class=die id=d0></div><div class=die id=d1></div></div><div id=info></div><div id=acts></div></div></div></div>
 <div id=side><div id=sb></div><div id=tabs><button onclick="UI.tab='p';render()">Players</button><button onclick="UI.tab='l';render()">Log</button><button onclick="UI.tab='r';render()">Rules</button></div><div id=sc></div></div>
-<div id=modal></div><div id=toast></div><div id=start></div>
+<div id=modal></div><div id=cf></div><div id=toast></div><div id=start></div>
 <input type=file id=imp accept=".json" style="display:none">
 <script>
 /* ===== DATA: board (UK edition). p=price, r=rent[base,1h,2h,3h,4h,hotel], hc=house cost. Mortgage = p/2 ===== */
@@ -174,22 +175,22 @@ function afterRoll(d){const p=cp(),sum=d[0]+d[1],db=d[0]==d[1];log(`${p.n} rolle
 function doRoll(){if(busy||G.pend||G.phase!='roll')return;if(!can())return err('Not your turn.');snap();busy=true;const d=G.nx,prev=H[H.length-1];G.d=d;G.nx=[r6(),r6()];spin(d);wsend({t:'dice',d});render();
  setTimeout(()=>{busy=false;afterRoll(d);netState(prev);render();anim()},1100)}
 function endTurn(){act(()=>{if(G.pend||G.phase!='post')return err('Finish your actions first.');G.dbl=0;let n=G.cur;do n=(n+1)%G.pl.length;while(G.pl[n].out);G.cur=n;G.phase='roll';G.turns++;log(`--- ${cp().n}'s turn ---`)})}
-function payJail(){act(()=>{const p=cp();if(p.cash<50)return err('Not enough cash.');p.cash-=50;p.jail=false;p.jt=0;log(`${p.n} pays £50 to leave Jail.`)})}
+function payJailDo(){act(()=>{const p=cp();if(p.cash<50)return err('Not enough cash.');p.cash-=50;p.jail=false;p.jt=0;log(`${p.n} pays £50 to leave Jail.`)})}
 function useCard(){act(()=>{const p=cp(),k=p.gf.pop();G.dk[k].push(k=='ch'?7:4);p.jail=false;p.jt=0;log(`${p.n} uses a Get Out of Jail Free card.`)})}
 /* ---- buying & auctions ---- */
-function buy(){act(()=>{const d=G.pend,p=G.pl[d.pid],s=B[d.i];if(p.cash<s.p)return err('Not enough cash.');p.cash-=s.p;G.own[d.i]={o:p.id,h:0,m:false};log(`${p.n} buys ${s.n} for ${money(s.p)}.`);G.pend=null;after()})}
+function buyDo(){act(()=>{const d=G.pend,p=G.pl[d.pid],s=B[d.i];if(p.cash<s.p)return err('Not enough cash.');p.cash-=s.p;G.own[d.i]={o:p.id,h:0,m:false};log(`${p.n} buys ${s.n} for ${money(s.p)}.`);G.pend=null;after()})}
 function startAuction(i){const ids=active().map(p=>p.id),k=ids.indexOf(cp().id);const ord=ids.slice(Math.max(k,0)).concat(ids.slice(0,Math.max(k,0)));
  G.pend={t:'au',i,bid:0,hi:null,ord,cur:ord[0],passed:[]};log(`Auction for ${B[i].n} begins.`)}
-function decline(){act(()=>{const i=G.pend.i;G.pend=null;startAuction(i)})}
+function declineDo(){act(()=>{const i=G.pend.i;G.pend=null;startAuction(i)})}
 function nextBidder(){const A=G.pend,alive=A.ord.filter(x=>!A.passed.includes(x));
  if((A.hi!=null&&alive.length==1&&alive[0]==A.hi)||!alive.length){
   if(A.hi!=null){G.pl[A.hi].cash-=A.bid;G.own[A.i]={o:A.hi,h:0,m:false};log(`${G.pl[A.hi].n} wins ${B[A.i].n} for ${money(A.bid)}.`)}else log(`${B[A.i].n} unsold.`);G.pend=null;after();return}
  let k=A.ord.indexOf(A.cur);do k=(k+1)%A.ord.length;while(A.passed.includes(A.ord[k])||A.ord[k]==A.hi);A.cur=A.ord[k]}
-function bid(){act(()=>{const A=G.pend,a=Math.floor(+$('bidv').value),p=G.pl[A.cur];if(!(a>A.bid))return err('Bid must beat the current bid (min £1).');if(a>p.cash)return err('You cannot bid more than your cash.');A.bid=a;A.hi=A.cur;log(`${p.n} bids ${money(a)}.`);nextBidder()})}
+function bidDo(){act(()=>{const A=G.pend,a=Math.floor(+$('bidv').value),p=G.pl[A.cur];if(!(a>A.bid))return err('Bid must beat the current bid (min £1).');if(a>p.cash)return err('You cannot bid more than your cash.');A.bid=a;A.hi=A.cur;log(`${p.n} bids ${money(a)}.`);nextBidder()})}
 function passBid(){act(()=>{const A=G.pend;log(`${G.pl[A.cur].n} passes.`);A.passed.push(A.cur);nextBidder()})}
 /* ---- debt ---- */
 function payDebt(){act(()=>{const d=G.pend,p=G.pl[d.pid];if(p.cash<d.q.reduce((s,x)=>s+x[1],0))return err('Still short of cash.');exec(p,d.q,d.why&&d.why.startsWith('Rent'));G.pend=null;after()})}
-function bankrupt(){if(!confirm('Declare bankruptcy?'))return;act(()=>{const d=G.pend,p=G.pl[d.pid],cr=d.q[0][0];
+function bankruptDo(){act(()=>{const d=G.pend,p=G.pl[d.pid],cr=d.q[0][0];
  owned(p.id).forEach(i=>{const o=G.own[i];if(o.h){p.cash+=B[i].hc*(o.h==5?5:o.h)/2;if(o.h==5)G.sup.H++;else G.sup.h+=o.h;o.h=0}});
  if(cr=='bank'){owned(p.id).forEach(i=>{delete G.own[i];G.aq.push(i)});p.gf.forEach(k=>G.dk[k].push(k=='ch'?7:4))}
  else{const c=G.pl[cr];c.cash+=p.cash;owned(p.id).forEach(i=>{G.own[i].o=cr;if(G.own[i].m){const f=Math.min(c.cash,Math.ceil(B[i].p/20));c.cash-=f;log(`${c.n} pays ${money(f)} (10%) on mortgaged ${B[i].n}.`)}});c.gf.push(...p.gf)}
@@ -198,25 +199,25 @@ function bankrupt(){if(!confirm('Declare bankruptcy?'))return;act(()=>{const d=G
 /* ---- building & mortgages (acts on the player who is current, or the debtor) ---- */
 const mp=()=>G.pend&&G.pend.t=='debt'?G.pl[G.pend.pid]:cp();
 const setH=i=>grp(B[i].g).map(k=>G.own[k].h);
-function build(i){act(()=>{const p=mp(),s=B[i],o=G.own[i];if(s.t!='prop'||!full(p.id,s.g))return err('You need the full colour set.');
+function buildDo(i){act(()=>{const p=mp(),s=B[i],o=G.own[i];if(s.t!='prop'||!full(p.id,s.g))return err('You need the full colour set.');
  if(grp(s.g).some(k=>G.own[k].m))return err('No property in the set may be mortgaged.');if(o.h>=5)return err('Already a hotel.');
  if(o.h>Math.min(...setH(i)))return err('Build evenly: build on the lowest property first.');if(p.cash<s.hc)return err('Not enough cash.');
  if(o.h==4){if(G.sup.H<1)return err('No hotels left in the bank.');G.sup.H--;G.sup.h+=4}else{if(G.sup.h<1)return err('No houses left in the bank.');G.sup.h--}
  p.cash-=s.hc;o.h++;log(`${p.n} builds on ${s.n} for ${money(s.hc)} (${o.h==5?'hotel':o.h+' houses'}).`)})}
-function sell(i){act(()=>{const p=mp(),s=B[i],o=G.own[i];if(!o.h)return err('No buildings here.');if(o.h<Math.max(...setH(i)))return err('Sell evenly: sell from the highest property first.');
+function sellDo(i){act(()=>{const p=mp(),s=B[i],o=G.own[i];if(!o.h)return err('No buildings here.');if(o.h<Math.max(...setH(i)))return err('Sell evenly: sell from the highest property first.');
  if(o.h==5){if(G.sup.h<4)return err('Not enough houses in the bank to replace the hotel.');G.sup.h-=4;G.sup.H++}else G.sup.h++;
  o.h--;p.cash+=s.hc/2;log(`${p.n} sells a building on ${s.n} for ${money(s.hc/2)}.`)})}
-function mort(i){act(()=>{const p=mp(),s=B[i],o=G.own[i];if(o.m)return err('Already mortgaged.');if(s.g&&grp(s.g).some(k=>G.own[k]&&G.own[k].h))return err('Sell all buildings in this set first.');o.m=true;p.cash+=s.p/2;log(`${p.n} mortgages ${s.n} for ${money(s.p/2)}.`)})}
-function unmort(i){act(()=>{const p=mp(),s=B[i],c=Math.ceil(s.p/2*1.1);if(p.cash<c)return err(`Need ${money(c)} to unmortgage.`);p.cash-=c;G.own[i].m=false;log(`${p.n} unmortgages ${s.n} for ${money(c)} (mortgage + 10%).`)})}
+function mortDo(i){act(()=>{const p=mp(),s=B[i],o=G.own[i];if(o.m)return err('Already mortgaged.');if(s.g&&grp(s.g).some(k=>G.own[k]&&G.own[k].h))return err('Sell all buildings in this set first.');o.m=true;p.cash+=s.p/2;log(`${p.n} mortgages ${s.n} for ${money(s.p/2)}.`)})}
+function unmortDo(i){act(()=>{const p=mp(),s=B[i],c=Math.ceil(s.p/2*1.1);if(p.cash<c)return err(`Need ${money(c)} to unmortgage.`);p.cash-=c;G.own[i].m=false;log(`${p.n} unmortgages ${s.n} for ${money(c)} (mortgage + 10%).`)})}
 /* ---- trading ---- */
 function openTrade(){if(!can()||G.tr)return err('Not your turn (or a trade is already pending).');const p=mp();TR={a:p.id,b:null,ca:0,cb:0,pa:[],pb:[],ga:0,gb:0,oa:0,ob:0};UI.modal='trade';render()}
 function trSet(k,v){TR[k]=v;TR.oa=TR.ob=0;render()}
 function trTog(k,i,on){TR[k]=TR[k].filter(x=>x!=i);if(on)TR[k].push(i);TR.oa=TR.ob=0}
 /* Proposer sends the offer; the other player then accepts or declines on their own laptop */
-function trConfirm(){if(!TR||TR.b==null)return err('Pick a player to trade with.');act(()=>{const A=G.pl[TR.a],Bp=G.pl[TR.b];G.tr=JSON.parse(JSON.stringify(TR));UI.modal=null;TR=null;log(`${A.n} proposes a trade to ${Bp.n}.`)})}
+function trConfirmDo(){act(()=>{const A=G.pl[TR.a],Bp=G.pl[TR.b];G.tr=JSON.parse(JSON.stringify(TR));UI.modal=null;TR=null;log(`${A.n} proposes a trade to ${Bp.n}.`)})}
 function trDecline(){act(()=>{log('Trade declined / cancelled.');G.tr=null})}
 /* Validates and performs the trade; mortgaged properties received cost the 10% fee immediately (and stay mortgaged) */
-function trExec(){act(()=>{const T=G.tr;if(!T)return false;const A=G.pl[T.a],Bp=G.pl[T.b];
+function trExecDo(){act(()=>{const T=G.tr;if(!T)return false;const A=G.pl[T.a],Bp=G.pl[T.b];
  for(const i of T.pa.concat(T.pb))if(grp(B[i].g).some(k=>G.own[k]&&G.own[k].h))return err('Sell buildings in that colour set before trading it.');
  const fee=(list)=>list.reduce((s,i)=>s+(G.own[i].m?Math.ceil(B[i].p/20):0),0);
  if(T.ca>A.cash||T.cb>Bp.cash)return err('A player does not have that cash.');
@@ -310,5 +311,19 @@ function applySave(t){try{const o=JSON.parse(t);if(!o.G||!o.G.pl)throw Error('no
 function loadG(){try{applySave(localStorage.getItem('ptsave'))}catch(e){err('Load failed: '+e.message)}}
 function expG(){try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({G,H})],{type:'application/json'}));a.download='property-tycoon-save.json';a.click()}catch(e){err('Export failed: '+e.message)}}
 $('imp').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>applySave(r.result);r.onerror=()=>err('Could not read file.');r.readAsText(f);e.target.value=''};
+/* ===== CONFIRMATION PROMPTS for significant actions ===== */
+/* Shows a Confirm / Cancel popup and runs fn only if confirmed */
+function ask(msg,fn){if(!can())return err('Not your turn.');const c=$('cf');c.style.display='flex';c.innerHTML=`<div class=mc><p style="font-size:1.2em;max-width:360px">${msg}</p><button class=big id=cfy>Confirm</button> <button onclick="$('cf').style.display='none'">Cancel</button></div>`;$('cfy').onclick=()=>{c.style.display='none';fn()}}
+function build(i){ask(`Build on <b>${B[i].n}</b> for ${money(B[i].hc)}?`,()=>buildDo(i))}
+function sell(i){ask(`Sell a building on <b>${B[i].n}</b> for ${money(B[i].hc/2)}?`,()=>sellDo(i))}
+function mort(i){ask(`Mortgage <b>${B[i].n}</b> for ${money(B[i].p/2)}? It will collect no rent.`,()=>mortDo(i))}
+function unmort(i){ask(`Unmortgage <b>${B[i].n}</b> for ${money(Math.ceil(B[i].p/2*1.1))} (mortgage + 10%)?`,()=>unmortDo(i))}
+function payJail(){ask('Pay £50 to leave Jail?',payJailDo)}
+function buy(){const i=G.pend.i;ask(`Buy <b>${B[i].n}</b> for ${money(B[i].p)}?`,buyDo)}
+function decline(){ask(`Decline to buy and send <b>${B[G.pend.i].n}</b> to auction?`,declineDo)}
+function bid(){const a=Math.floor(+$('bidv').value);ask(`Bid ${money(a)} on <b>${B[G.pend.i].n}</b>?`,bidDo)}
+function trConfirm(){if(!TR||TR.b==null)return err('Pick a player to trade with.');ask('Send this trade proposal?',trConfirmDo)}
+function trExec(){ask('Accept this trade?',trExecDo)}
+function bankrupt(){ask('Declare bankruptcy? You will be out of the game.',bankruptDo)}
 initDice();showStart();
 </script></body></html>
