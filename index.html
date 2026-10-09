@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Property Tycoon</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#12141a;color:#e6e8ee;font:13px system-ui,sans-serif;display:flex;height:100vh;overflow:hidden}
+#bw{flex:1;display:flex;align-items:center;justify-content:center}
+#board{--b:min(96vh,calc(100vw - 390px));width:var(--b);height:var(--b);position:relative;font-size:calc(var(--b)/95)}
+#grid{position:absolute;inset:0;display:grid;grid-template:1.5fr repeat(9,1fr) 1.5fr/1.5fr repeat(9,1fr) 1.5fr;background:#cde6d0;border:2px solid #111}
+.sq{position:relative;overflow:hidden;cursor:pointer;display:flex;color:#111;border:1px solid #111;font-size:.9em;background:#cde6d0}
+.s0{flex-direction:column}.s2{flex-direction:column-reverse}.s1{flex-direction:row-reverse}.s3{flex-direction:row}.s4{flex-direction:column;font-size:1.1em}
+.sq:hover{background:#b9d6bc}.sq.mort{filter:grayscale(1);opacity:.55}
+.band{flex:0 0 22%;display:flex;align-items:center;justify-content:center;gap:1px;border:1px solid #111}.s1 .band,.s3 .band{flex-direction:column}
+.tx{flex:1;display:flex;flex-direction:column;justify-content:space-between;align-items:center;text-align:center;padding:2px;min-width:0;min-height:0}
+.s1 .tx,.s3 .tx{writing-mode:vertical-rl}.s3 .tx,.s2 .tx{transform:rotate(180deg)}
+.nm{font-weight:600;text-transform:uppercase;line-height:1.05;font-size:.85em;overflow-wrap:anywhere}.pr{font-size:.8em}.ic{font-size:1.9em;line-height:1}
+.bl{width:.9em;height:.9em;background:#2fa84f;border:1px solid #000}.bl.h{background:#e03c3c;width:1.8em}
+.own{position:absolute;right:2px;bottom:2px;width:1.2em;height:1.2em;border-radius:50%;border:1px solid #000;font-size:.8em;color:#000;font-weight:bold;line-height:1.1em;text-align:center}
+.tks{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);font-size:1.7em;line-height:1;text-shadow:0 0 3px #fff;white-space:nowrap}
+#ctr{position:absolute;left:12.5%;top:12.5%;width:75%;height:75%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8em;text-align:center;padding:1em;color:#111}
+#ctr h1{margin:0;font-size:3em;letter-spacing:.05em;color:#fff;background:#d9262c;padding:.2em .6em;border:3px solid #fff;outline:3px solid #d9262c;text-shadow:2px 2px 0 #111}
+.card{position:absolute;width:30%;height:16%;border:2px dashed #111;border-radius:6px;opacity:.5;display:flex;align-items:center;justify-content:center;font-weight:bold;letter-spacing:.1em}
+#dice{display:flex;gap:30px;perspective:500px;height:70px;align-items:center}
+.die{width:56px;height:56px;position:relative;transform-style:preserve-3d;transition:transform 1s ease-out}
+.f{position:absolute;width:56px;height:56px;background:#eee;color:#111;font-size:48px;line-height:56px;text-align:center;border-radius:8px}
+.f1{transform:translateZ(28px)}.f6{transform:rotateY(180deg) translateZ(28px)}.f2{transform:rotateY(90deg) translateZ(28px)}.f5{transform:rotateY(-90deg) translateZ(28px)}.f3{transform:rotateX(90deg) translateZ(28px)}.f4{transform:rotateX(-90deg) translateZ(28px)}
+#side{width:380px;background:#171a22;border-left:1px solid #000;display:flex;flex-direction:column;height:100vh}
+#sb{padding:6px;display:flex;flex-wrap:wrap;gap:4px}#tabs{display:flex}#tabs button{flex:1}
+#sc{flex:1;overflow:auto;padding:6px}
+button,.b{background:#2c3342;color:#e6e8ee;border:1px solid #444c60;border-radius:5px;padding:5px 9px;cursor:pointer;font:inherit}
+button:hover{background:#3a4358}button:disabled{opacity:.4;cursor:default}.big{font-size:1.5em;padding:.5em 1.2em;background:#2563c8}.red{background:#a33}
+.pc{border:1px solid #333;border-radius:6px;padding:5px;margin-bottom:6px}.pc.cur{border-color:#7cf;background:#1c2433}.pc.out{opacity:.4}
+.chip{display:inline-block;padding:0 4px;margin:1px;border-radius:3px;color:#000;font-size:11px}
+#modal,#start{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:5}
+.mc{background:#1d212b;border:1px solid #555;border-radius:8px;padding:14px;max-width:640px;max-height:90vh;overflow:auto;min-width:320px}
+#toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#245;padding:8px 14px;border-radius:6px;display:none;z-index:9;max-width:70vw}
+#toast.e{background:#722}input,select{background:#12141a;color:#e6e8ee;border:1px solid #555;border-radius:4px;padding:4px}
+table{border-collapse:collapse}td{padding:2px 8px;border-bottom:1px solid #333}.log div{border-bottom:1px solid #222;padding:2px 0}
+</style></head><body>
+<div id=bw><div id=board><div id=grid></div><div id=ctr><div class=card style="left:6%;top:9%;transform:rotate(35deg)">CHANCE</div><div class=card style="right:6%;bottom:9%;transform:rotate(35deg)">COMMUNITY CHEST</div><h1>PROPERTY TYCOON</h1>
+<div id=dice><div class=die id=d0></div><div class=die id=d1></div></div><div id=info></div><div id=acts></div></div></div></div>
+<div id=side><div id=sb></div><div id=tabs><button onclick="UI.tab='p';render()">Players</button><button onclick="UI.tab='l';render()">Log</button><button onclick="UI.tab='r';render()">Rules</button></div><div id=sc></div></div>
+<div id=modal></div><div id=toast></div><div id=start></div>
+<input type=file id=imp accept=".json" style="display:none">
+<script>
+/* ===== DATA: board (UK edition). p=price, r=rent[base,1h,2h,3h,4h,hotel], hc=house cost. Mortgage = p/2 ===== */
+const P=(n,p,g,r,hc)=>({n,t:'prop',p,g,r,hc}),S=n=>({n,t:'stn',p:200,g:'st'}),U=n=>({n,t:'util',p:150,g:'ut'}),X=(n,t,p)=>({n,t,p});
+const R1=[8,40,100,300,450,600],R2=[10,50,150,450,625,750],R3=[14,70,200,550,750,950],R4=[18,90,250,700,875,1050],R5=[22,110,330,800,975,1150],R6=[26,130,390,900,1100,1275];
+const B=[X('Go','go'),P('Old Kent Road',60,'br',[2,10,30,90,160,250],50),X('Community Chest','cc'),P('Whitechapel Road',60,'br',[4,20,60,180,320,450],50),X('Income Tax','tax',200),S("King's Cross Station"),
+P('The Angel Islington',100,'lb',[6,30,90,270,400,550],50),X('Chance','ch'),P('Euston Road',100,'lb',[6,30,90,270,400,550],50),P('Pentonville Road',120,'lb',R1,50),X('Jail / Just Visiting','jail'),
+P('Pall Mall',140,'pk',R2,100),U('Electric Company'),P('Whitehall',140,'pk',R2,100),P('Northumberland Avenue',160,'pk',[12,60,180,500,700,900],100),S('Marylebone Station'),
+P('Bow Street',180,'or',R3,100),X('Community Chest','cc'),P('Marlborough Street',180,'or',R3,100),P('Vine Street',200,'or',[16,80,220,600,800,1000],100),X('Free Parking','fp'),
+P('Strand',220,'rd',R4,150),X('Chance','ch'),P('Fleet Street',220,'rd',R4,150),P('Trafalgar Square',240,'rd',[20,100,300,750,925,1100],150),S('Fenchurch Street Station'),
+P('Leicester Square',260,'yl',R5,150),P('Coventry Street',260,'yl',R5,150),U('Water Works'),P('Piccadilly',280,'yl',[24,120,360,850,1025,1200],150),X('Go To Jail','gtj'),
+P('Regent Street',300,'gr',R6,200),P('Oxford Street',300,'gr',R6,200),X('Community Chest','cc'),P('Bond Street',320,'gr',[28,150,450,1000,1200,1400],200),S('Liverpool Street Station'),X('Chance','ch'),
+P('Park Lane',350,'db',[35,175,500,1100,1300,1500],200),X('Super Tax','tax',100),P('Mayfair',400,'db',[50,200,600,1400,1700,2000],200)];
+const COL={br:'#7b2832',lb:'#1f9be0',pk:'#ee2a7b',or:'#f0a023',rd:'#e22b2b',yl:'#e4e02f',gr:'#26a54a',db:'#3b63ad',st:'#999',ut:'#bbb'};
+const PC=['#e55','#5ae','#5d5','#fc3','#c7f','#f93','#3dc','#ccc'],TOKS=['🎩','🚗','🐕','🥾','⛵','🧵','🛒','🧺'];
+/* Cards: [text, code, a, b]. to=advance, nu/ns=nearest utility/station, c=cash, gf=jail card, b3=back 3, gj=jail, rp=repairs, ep=pay each, eg=collect from each */
+const CH=[['Advance to Go (collect £200)','to',0],['Advance to Trafalgar Square. If you pass Go, collect £200','to',24],['Advance to Pall Mall. If you pass Go, collect £200','to',11],
+['Advance to nearest Utility. If unowned you may buy it; if owned, throw dice and pay owner 10x the throw','nu'],['Advance to nearest Station: pay owner double rent, or buy if unowned','ns'],['Advance to nearest Station: pay owner double rent, or buy if unowned','ns'],
+['Bank pays you dividend of £50','c',50],['Get Out of Jail Free','gf'],['Go back 3 spaces','b3'],['Go to Jail. Do not pass Go, do not collect £200','gj'],
+['General repairs on all your property: £25 per house, £100 per hotel','rp',25,100],['Speeding fine £15','c',-15],["Take a trip to King's Cross Station. If you pass Go, collect £200",'to',5],
+['You have been elected Chairman of the Board. Pay each player £50','ep',50],['Your building loan matures. Collect £150','c',150],['Advance to Mayfair','to',39]];
+const CC=[['Advance to Go (collect £200)','to',0],['Bank error in your favour. Collect £200','c',200],["Doctor's fees. Pay £50",'c',-50],['From sale of stock you get £50','c',50],['Get Out of Jail Free','gf'],
+['Go to Jail. Do not pass Go, do not collect £200','gj'],['Holiday fund matures. Receive £100','c',100],['Income tax refund. Collect £20','c',20],['It is your birthday. Collect £10 from each player','eg',10],
+['Life insurance matures. Collect £100','c',100],['Hospital fees. Pay £100','c',-100],['School fees. Pay £50','c',-50],['Receive £25 consultancy fee','c',25],
+['Street repairs: £40 per house, £115 per hotel','rp',40,115],['Second prize in a beauty contest. Collect £10','c',10],['You inherit £100','c',100]];
+
+/* ===== STATE & HELPERS ===== */
+const $=id=>document.getElementById(id),r6=()=>1+Math.floor(Math.random()*6),money=n=>'£'+n,sl=ms=>new Promise(r=>setTimeout(r,ms));
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+let G=null,H=[],UI={tab:'p',modal:null},busy=false,vis={},AQ=[],animating=false,TR=null,spins=0;
+const cp=()=>G.pl[G.cur],grp=g=>B.map((s,i)=>s.g==g?i:-1).filter(i=>i>=0);
+const owned=pid=>Object.keys(G.own).map(Number).filter(i=>G.own[i].o==pid).sort((a,b)=>a-b);
+const active=()=>G.pl.filter(p=>!p.out);
+const owns=(pid,i)=>G.own[i]&&G.own[i].o==pid;
+const full=(pid,g)=>grp(g).every(i=>owns(pid,i));
+const net=p=>p.cash+owned(p.id).reduce((s,i)=>{const o=G.own[i];return s+(o.m?B[i].p/2:B[i].p)+(o.h*(B[i].hc||0))},0);
+function log(m){G.log.push(m);toast(m)}
+function toast(m,e){const t=$('toast');t.textContent=m;t.className=e?'e':'';t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',3500)}
+const err=m=>{toast('⚠ '+m,1);return false};
+function snap(){H.push(JSON.stringify(G));if(H.length>150)H.shift()}
+/* Runs a game action with an undo snapshot; actions returning false (illegal) discard the snapshot */
+function act(f){if(busy||!G)return;if(!can())return err('Not your turn.');snap();let r;try{r=f()}catch(e){console.error(e);r=false}if(r===false)H.pop();else netState(H[H.length-1]);render();anim()}
+function undo(){if(busy||!H.length)return toast('Nothing to undo.',1);if(!can())return err('Not your turn.');const n0=H.length;G=JSON.parse(H.pop());while(G.pend&&(G.pend.t=='buy'||G.pend.t=='card')&&H.length)G=JSON.parse(H.pop());AQ=[];syncVis();showDice(G.d);netState(null,n0-H.length);render()}
+
+/* ===== ONLINE MULTIPLAYER (WebSocket relay; the server only stores and forwards state) ===== */
+const NET={on:false,ws:null,you:null,room:'',name:'',tok:'',lobby:null,cid:(()=>{try{let c=localStorage.getItem('ptcid');if(!c){c=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('ptcid',c)}return c}catch(e){return Math.random().toString(36).slice(2)}})()};
+const me=()=>NET.on&&G?G.pl.find(p=>p.cid==NET.you):null;
+function wsend(o){if(NET.ws&&NET.ws.readyState==1)NET.ws.send(JSON.stringify(o))}
+/* Sends the full game state (plus the pre-action snapshot so everyone's undo history stays in step) */
+function netState(prev,pops,start){if(NET.on)wsend({t:'st',G,prev,pops,start})}
+/* Returns true if this laptop's player is allowed to act right now */
+function can(){if(!NET.on)return true;const m=me();if(!m||!G)return false;const d=G.pend;
+ if(G.tr&&(m.id==G.tr.a||m.id==G.tr.b))return true;
+ if(d){if(d.t=='au')return d.cur==m.id;if(d.t=='debt')return d.pid==m.id;if(d.t=='win')return true;return d.pid==m.id}
+ return G.cur==m.id}
+function connect(){const ws=NET.ws=new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host);
+ ws.onopen=()=>wsend({t:'join',room:NET.room,cid:NET.cid,name:NET.name,tok:NET.tok});
+ ws.onmessage=e=>onMsg(JSON.parse(e.data));
+ ws.onerror=()=>{if(!NET.on)err('Could not connect. Open the hosted website link (not the file) to play online.')};
+ ws.onclose=()=>{if(NET.on){toast('Disconnected. Reconnecting...',1);setTimeout(connect,2000)}}}
+setInterval(()=>wsend({t:'ping'}),25000);
+function joinOnline(){NET.name=($('on').value.trim()||'Player').slice(0,14);NET.tok=$('ot').value;NET.room=($('or').value.trim()||Math.random().toString(36).slice(2,6)).toUpperCase();connect()}
+function startOnline(){newGame(NET.lobby.players.map((p,i)=>({name:p.name,tok:p.tok,cid:i})))}
+function showLobby(m){NET.on=true;NET.lobby=m;NET.you=m.you;const s=$('start');s.style.display='flex';
+ s.innerHTML=`<div class=mc><h1 style="color:#7cf;margin-top:0">Room ${m.room}</h1>Send friends this page's link and the room code <b>${m.room}</b>.<br><br>${m.players.map((p,i)=>`<div style="font-size:1.3em">${p.tok} ${p.name}${i==0?' (host)':''}${i==m.you?' ← you':''}</div>`).join('')}<br>${m.you==0?`<button class=big ${m.players.length<2?'disabled':''} onclick=startOnline()>Start game</button>`:'Waiting for the host to start...'} <button onclick=toStart()>Leave</button></div>`}
+/* Handles messages from the server */
+function onMsg(m){
+ if(m.t=='err'){NET.on=false;return err(m.m)}
+ if(m.t=='lobby')return showLobby(m);
+ if(m.t=='dice'){spin(m.d);return}
+ if(m.t!='st')return;
+ const old=G;NET.on=true;if(m.you!=null)NET.you=m.you;G=m.G;
+ if(m.sync){H=[];AQ=[];syncVis();showDice(G.d)}
+ else if(m.pops){for(let k=0;k<m.pops;k++)H.pop();AQ=[];syncVis();showDice(G.d)}
+ else if(m.start){H=[];AQ=[];syncVis();showDice(G.d)}
+ else{if(m.prev)H.push(m.prev);if(old)G.pl.forEach(p=>{const o=old.pl.find(x=>x.id==p.id);if(o&&o.pos!=p.pos){const df=(p.pos-o.pos+40)%40;AQ.push({id:p.id,to:p.pos,d:(p.jail&&!o.jail)?0:df==37?-1:1})}})}
+ $('start').style.display='none';render();if(!m.sync&&!m.pops&&G.log.length)toast(G.log[G.log.length-1]);anim()}
+
+/* ===== RULES ENGINE ===== */
+/* Calculates rent for square i and returns [amount, working text] */
+function rent(i,sum,mult,u10){const s=B[i],o=G.own[i],n=s.n;let a,t;
+ if(s.t=='stn'){const c=grp('st').filter(k=>owns(o.o,k)).length;a=25*2**(c-1);t=`Rent on ${n}: owner has ${c} station(s) = ${money(a)}`;if(mult>1){a*=2;t+=` x2 (card) = ${money(a)}`}}
+ else if(s.t=='util'){const c=grp('ut').filter(k=>owns(o.o,k)).length,m=u10||c==2?10:4;a=sum*m;t=`Utility rent: dice ${sum} x ${m} (${u10?'card':c==2?'owner has both utilities':'owner has one utility'}) = ${money(a)}`}
+ else if(o.h>0){a=s.r[o.h];t=`Rent on ${n}: ${o.h==5?'hotel':o.h+' house(s)'}, rent = ${money(a)}`}
+ else if(grp(s.g).every(k=>owns(o.o,k)&&!G.own[k].m)){a=s.r[0]*2;t=`Rent on ${n}: owner has full unmortgaged set, no buildings: ${money(s.r[0])} x 2 = ${money(a)}`}
+ else{a=s.r[0];t=`Rent on ${n}: base rent = ${money(a)}`}
+ return[a,t]}
+/* Queues an animated token move (d=1 forward, -1 back, 0 jump) and updates position */
+function mv(p,to,d){AQ.push({id:p.id,to,d});p.pos=to}
+/* Moves forward to square `to`, paying £200 if passing/landing on Go */
+function go(p,to){if(to<p.pos){p.cash+=200;log(`${p.n} passes Go and collects £200.`)}mv(p,to,1)}
+function step(p,sum){go(p,(p.pos+sum)%40);land(p)}
+function jail(p){mv(p,10,0);p.jail=true;p.jt=0;G.dbl=0;G.phase='post';log(`${p.n} goes to Jail.`)}
+/* Resolves the square a player is standing on */
+function land(p,o={}){const s=B[p.pos],ow=G.own[p.pos];log(`${p.n} landed on ${s.n}.`);
+ if(['prop','stn','util'].includes(s.t)){
+  if(!ow){G.pend={t:'buy',i:p.pos,pid:p.id};return}
+  if(ow.o==p.id)return;if(ow.m){log(`${s.n} is mortgaged: no rent.`);return}
+  const[a,t]=rent(p.pos,G.d[0]+G.d[1],o.mult||1,o.u10);log(t);pay(p.id,[[ow.o,a]],t,true)}
+ else if(s.t=='tax'){log(`${s.n}: pay ${money(s.p)} to the bank.`);pay(p.id,[['bank',s.p]],s.n)}
+ else if(s.t=='gtj')jail(p);else if(s.t=='cc'||s.t=='ch')draw(p,s.t)}
+/* Draws and applies a Chance / Community Chest card */
+function draw(p,k){G.pend={t:'card',pid:p.id,k,ix:G.dk[k].shift()}}
+/* Player presses "Take card": log it and apply its effect */
+function takeCard(){act(()=>{const d=G.pend,p=G.pl[d.pid],c=(d.k=='ch'?CH:CC)[d.ix];G.pend=null;log(`${p.n} takes a ${d.k=='ch'?'Chance':'Community Chest'} card: ${c[0]}`);applyCard(p,d.k,d.ix,c);after()})}
+/* Applies a drawn Chance / Community Chest card */
+function applyCard(p,k,ix,c){
+ if(c[1]=='gf')p.gf.push(k);else G.dk[k].push(ix);
+ const oth=active().filter(x=>x.id!=p.id);
+ switch(c[1]){
+  case'to':go(p,c[2]);land(p);break;
+  case'nu':case'ns':{const L=c[1]=='nu'?[12,28]:[5,15,25,35];go(p,L.find(x=>x>p.pos)??L[0]);if(c[1]=='nu'){G.d=G.nx;G.nx=[r6(),r6()];log(`Dice thrown: ${G.d[0]}+${G.d[1]}`)}land(p,c[1]=='nu'?{u10:1}:{mult:2});break}
+  case'c':if(c[2]>0){p.cash+=c[2]}else pay(p.id,[['bank',-c[2]]],'card');break;
+  case'b3':mv(p,(p.pos+37)%40,-1);land(p);break;
+  case'gj':jail(p);break;
+  case'rp':{let h=0,H2=0;owned(p.id).forEach(i=>{const o=G.own[i];if(o.h==5)H2++;else h+=o.h});const a=h*c[2]+H2*c[3];log(`Repairs: ${h} houses x £${c[2]} + ${H2} hotels x £${c[3]} = ${money(a)}`);if(a)pay(p.id,[['bank',a]],'repairs');break}
+  case'ep':G.qd.push(['pay',p.id,oth.map(o=>[o.id,c[2]]),'chairman']);break;
+  case'eg':oth.forEach(o=>G.qd.push(['pay',o.id,[[p.id,c[2]]],'birthday']));break}}
+/* Pays money now or enters DEBT RESOLUTION if cash is short */
+function pay(pid,list,why,rf){const p=G.pl[pid],tot=list.reduce((s,x)=>s+x[1],0);
+ if(p.cash>=tot)exec(p,list,rf);else{G.pend={t:'debt',pid,q:list,why};log(`${p.n} owes ${money(tot)} but has ${money(p.cash)}: DEBT RESOLUTION.`)}}
+function exec(p,list,rf){list.forEach(([to,a])=>{p.cash-=a;if(to!='bank')G.pl[to].cash+=a;if(rf){p.rp+=a;if(to!='bank')G.pl[to].rg+=a}if(a>G.big){G.big=a;G.bigw=p.n}log(`${p.n} pays ${money(a)} to ${to=='bank'?'the bank':G.pl[to].n}.`)})}
+/* Processes queued payments/moves until something needs player input */
+function drain(){while(!G.pend&&G.qd.length){const q=G.qd.shift();if(G.pl[q[1]].out)continue;if(q[0]=='pay')pay(q[1],q[2],q[3]);else step(G.pl[q[1]],q[2])}}
+function after(){drain();checkWin();if(!G.pend&&G.aq.length)startAuction(G.aq.shift())}
+function checkWin(){if(!G.pend&&active().length==1)G.pend={t:'win',w:active()[0].id}}
+function afterRoll(d){const p=cp(),sum=d[0]+d[1],db=d[0]==d[1];log(`${p.n} rolled ${d[0]} + ${d[1]} = ${sum}${db?' (doubles)':''}.`);
+ if(p.jail){G.phase='post';if(db){p.jail=false;p.jt=0;log('Doubles! Out of jail (no extra roll).');step(p,sum)}
+  else{p.jt++;log(`No doubles (attempt ${p.jt}/3).`);if(p.jt>=3){p.jail=false;p.jt=0;log('Third failure: pay £50 and move.');G.qd.push(['pay',p.id,[['bank',50]],'jail fine'],['mv',p.id,sum])}}}
+ else{G.dbl=db?G.dbl+1:0;if(G.dbl==3){log('Three doubles in a row: Jail!');jail(p)}else{G.phase=db?'roll':'post';step(p,sum)}}
+ after()}
+/* Rolls dice (outcome pre-decided in state so undo cannot re-roll), animates, then resolves */
+function doRoll(){if(busy||G.pend||G.phase!='roll')return;if(!can())return err('Not your turn.');snap();busy=true;const d=G.nx,prev=H[H.length-1];G.d=d;G.nx=[r6(),r6()];spin(d);wsend({t:'dice',d});render();
+ setTimeout(()=>{busy=false;afterRoll(d);netState(prev);render();anim()},1100)}
+function endTurn(){act(()=>{if(G.pend||G.phase!='post')return err('Finish your actions first.');G.dbl=0;let n=G.cur;do n=(n+1)%G.pl.length;while(G.pl[n].out);G.cur=n;G.phase='roll';G.turns++;log(`--- ${cp().n}'s turn ---`)})}
+function payJail(){act(()=>{const p=cp();if(p.cash<50)return err('Not enough cash.');p.cash-=50;p.jail=false;p.jt=0;log(`${p.n} pays £50 to leave Jail.`)})}
+function useCard(){act(()=>{const p=cp(),k=p.gf.pop();G.dk[k].push(k=='ch'?7:4);p.jail=false;p.jt=0;log(`${p.n} uses a Get Out of Jail Free card.`)})}
+/* ---- buying & auctions ---- */
+function buy(){act(()=>{const d=G.pend,p=G.pl[d.pid],s=B[d.i];if(p.cash<s.p)return err('Not enough cash.');p.cash-=s.p;G.own[d.i]={o:p.id,h:0,m:false};log(`${p.n} buys ${s.n} for ${money(s.p)}.`);G.pend=null;after()})}
+function startAuction(i){const ids=active().map(p=>p.id),k=ids.indexOf(cp().id);const ord=ids.slice(Math.max(k,0)).concat(ids.slice(0,Math.max(k,0)));
+ G.pend={t:'au',i,bid:0,hi:null,ord,cur:ord[0],passed:[]};log(`Auction for ${B[i].n} begins.`)}
+function decline(){act(()=>{const i=G.pend.i;G.pend=null;startAuction(i)})}
+function nextBidder(){const A=G.pend,alive=A.ord.filter(x=>!A.passed.includes(x));
+ if((A.hi!=null&&alive.length==1&&alive[0]==A.hi)||!alive.length){
+  if(A.hi!=null){G.pl[A.hi].cash-=A.bid;G.own[A.i]={o:A.hi,h:0,m:false};log(`${G.pl[A.hi].n} wins ${B[A.i].n} for ${money(A.bid)}.`)}else log(`${B[A.i].n} unsold.`);G.pend=null;after();return}
+ let k=A.ord.indexOf(A.cur);do k=(k+1)%A.ord.length;while(A.passed.includes(A.ord[k])||A.ord[k]==A.hi);A.cur=A.ord[k]}
+function bid(){act(()=>{const A=G.pend,a=Math.floor(+$('bidv').value),p=G.pl[A.cur];if(!(a>A.bid))return err('Bid must beat the current bid (min £1).');if(a>p.cash)return err('You cannot bid more than your cash.');A.bid=a;A.hi=A.cur;log(`${p.n} bids ${money(a)}.`);nextBidder()})}
+function passBid(){act(()=>{const A=G.pend;log(`${G.pl[A.cur].n} passes.`);A.passed.push(A.cur);nextBidder()})}
+/* ---- debt ---- */
+function payDebt(){act(()=>{const d=G.pend,p=G.pl[d.pid];if(p.cash<d.q.reduce((s,x)=>s+x[1],0))return err('Still short of cash.');exec(p,d.q,d.why&&d.why.startsWith('Rent'));G.pend=null;after()})}
+function bankrupt(){if(!confirm('Declare bankruptcy?'))return;act(()=>{const d=G.pend,p=G.pl[d.pid],cr=d.q[0][0];
+ owned(p.id).forEach(i=>{const o=G.own[i];if(o.h){p.cash+=B[i].hc*(o.h==5?5:o.h)/2;if(o.h==5)G.sup.H++;else G.sup.h+=o.h;o.h=0}});
+ if(cr=='bank'){owned(p.id).forEach(i=>{delete G.own[i];G.aq.push(i)});p.gf.forEach(k=>G.dk[k].push(k=='ch'?7:4))}
+ else{const c=G.pl[cr];c.cash+=p.cash;owned(p.id).forEach(i=>{G.own[i].o=cr;if(G.own[i].m){const f=Math.min(c.cash,Math.ceil(B[i].p/20));c.cash-=f;log(`${c.n} pays ${money(f)} (10%) on mortgaged ${B[i].n}.`)}});c.gf.push(...p.gf)}
+ p.cash=0;p.gf=[];p.out=true;G.elim.push(p.n);log(`${p.n} is BANKRUPT.`);G.pend=null;G.qd=G.qd.filter(x=>x[1]!=p.id);
+ if(G.cur==p.id){let n=G.cur;do n=(n+1)%G.pl.length;while(G.pl[n].out&&active().length>1);G.cur=n;G.phase='roll';G.dbl=0;G.turns++}after()})}
+/* ---- building & mortgages (acts on the player who is current, or the debtor) ---- */
+const mp=()=>G.pend&&G.pend.t=='debt'?G.pl[G.pend.pid]:cp();
+const setH=i=>grp(B[i].g).map(k=>G.own[k].h);
+function build(i){act(()=>{const p=mp(),s=B[i],o=G.own[i];if(s.t!='prop'||!full(p.id,s.g))return err('You need the full colour set.');
+ if(grp(s.g).some(k=>G.own[k].m))return err('No property in the set may be mortgaged.');if(o.h>=5)return err('Already a hotel.');
+ if(o.h>Math.min(...setH(i)))return err('Build evenly: build on the lowest property first.');if(p.cash<s.hc)return err('Not enough cash.');
+ if(o.h==4){if(G.sup.H<1)return err('No hotels left in the bank.');G.sup.H--;G.sup.h+=4}else{if(G.sup.h<1)return err('No houses left in the bank.');G.sup.h--}
+ p.cash-=s.hc;o.h++;log(`${p.n} builds on ${s.n} for ${money(s.hc)} (${o.h==5?'hotel':o.h+' houses'}).`)})}
+function sell(i){act(()=>{const p=mp(),s=B[i],o=G.own[i];if(!o.h)return err('No buildings here.');if(o.h<Math.max(...setH(i)))return err('Sell evenly: sell from the highest property first.');
+ if(o.h==5){if(G.sup.h<4)return err('Not enough houses in the bank to replace the hotel.');G.sup.h-=4;G.sup.H++}else G.sup.h++;
+ o.h--;p.cash+=s.hc/2;log(`${p.n} sells a building on ${s.n} for ${money(s.hc/2)}.`)})}
+function mort(i){act(()=>{const p=mp(),s=B[i],o=G.own[i];if(o.m)return err('Already mortgaged.');if(s.g&&grp(s.g).some(k=>G.own[k]&&G.own[k].h))return err('Sell all buildings in this set first.');o.m=true;p.cash+=s.p/2;log(`${p.n} mortgages ${s.n} for ${money(s.p/2)}.`)})}
+function unmort(i){act(()=>{const p=mp(),s=B[i],c=Math.ceil(s.p/2*1.1);if(p.cash<c)return err(`Need ${money(c)} to unmortgage.`);p.cash-=c;G.own[i].m=false;log(`${p.n} unmortgages ${s.n} for ${money(c)} (mortgage + 10%).`)})}
+/* ---- trading ---- */
+function openTrade(){if(!can()||G.tr)return err('Not your turn (or a trade is already pending).');const p=mp();TR={a:p.id,b:null,ca:0,cb:0,pa:[],pb:[],ga:0,gb:0,oa:0,ob:0};UI.modal='trade';render()}
+function trSet(k,v){TR[k]=v;TR.oa=TR.ob=0;render()}
+function trTog(k,i,on){TR[k]=TR[k].filter(x=>x!=i);if(on)TR[k].push(i);TR.oa=TR.ob=0}
+/* Proposer sends the offer; the other player then accepts or declines on their own laptop */
+function trConfirm(){if(!TR||TR.b==null)return err('Pick a player to trade with.');act(()=>{const A=G.pl[TR.a],Bp=G.pl[TR.b];G.tr=JSON.parse(JSON.stringify(TR));UI.modal=null;TR=null;log(`${A.n} proposes a trade to ${Bp.n}.`)})}
+function trDecline(){act(()=>{log('Trade declined / cancelled.');G.tr=null})}
+/* Validates and performs the trade; mortgaged properties received cost the 10% fee immediately (and stay mortgaged) */
+function trExec(){act(()=>{const T=G.tr;if(!T)return false;const A=G.pl[T.a],Bp=G.pl[T.b];
+ for(const i of T.pa.concat(T.pb))if(grp(B[i].g).some(k=>G.own[k]&&G.own[k].h))return err('Sell buildings in that colour set before trading it.');
+ const fee=(list)=>list.reduce((s,i)=>s+(G.own[i].m?Math.ceil(B[i].p/20):0),0);
+ if(T.ca>A.cash||T.cb>Bp.cash)return err('A player does not have that cash.');
+ if(A.cash-T.ca+T.cb<fee(T.pb)||Bp.cash-T.cb+T.ca<fee(T.pa))return err('A player cannot afford the 10% fee on mortgaged property.');
+ if(T.ga>A.gf.length||T.gb>Bp.gf.length)return err('Not enough Get Out of Jail Free cards.');
+ A.cash+=T.cb-T.ca-fee(T.pb);Bp.cash+=T.ca-T.cb-fee(T.pa);
+ T.pa.forEach(i=>G.own[i].o=Bp.id);T.pb.forEach(i=>G.own[i].o=A.id);
+ const mvg=(f,t,n)=>{for(let k=0;k<n;k++)t.gf.push(f.gf.pop())};mvg(A,Bp,T.ga);mvg(Bp,A,T.gb);
+ G.trades++;log(`TRADE: ${A.n} gives ${money(T.ca)}, ${T.pa.map(i=>B[i].n).join(', ')||'no property'}, ${T.ga} card(s); ${Bp.n} gives ${money(T.cb)}, ${T.pb.map(i=>B[i].n).join(', ')||'no property'}, ${T.gb} card(s). Mortgaged properties received cost 10% of mortgage value immediately and stay mortgaged.`);
+ G.tr=null;UI.modal=null;TR=null})}
+
+/* ===== ANIMATION & DICE ===== */
+const FR={1:[0,0],2:[0,-90],3:[-90,0],4:[90,0],5:[0,90],6:[0,180]};
+function initDice(){[0,1].forEach(k=>$('d'+k).innerHTML=[1,2,3,4,5,6].map(n=>`<div class="f f${n}">${'⚀⚁⚂⚃⚄⚅'[n-1]}</div>`).join(''))}
+function spin(d){spins++;d.forEach((v,k)=>{const[x,y]=FR[v];$('d'+k).style.transform=`rotateX(${x+720*spins+k*360}deg) rotateY(${y+720*spins}deg)`})}
+function showDice(d){d.forEach((v,k)=>{const e=$('d'+k),[x,y]=FR[v];e.style.transition='none';e.style.transform=`rotateX(${x}deg) rotateY(${y}deg)`;void e.offsetWidth;e.style.transition=''});spins=0}
+const syncVis=()=>{vis={};G.pl.forEach(p=>vis[p.id]=p.pos)};
+/* Steps tokens one square at a time */
+async function anim(){if(animating)return;animating=true;while(AQ.length){const a=AQ.shift();if(!a.d){vis[a.id]=a.to;renderBoard();continue}while(vis[a.id]!=a.to){vis[a.id]=(vis[a.id]+a.d+40)%40;renderBoard();await sl(110)}}animating=false;renderBoard()}
+
+/* ===== RENDERING ===== */
+const pos=i=>i==0?[11,11]:i<10?[11,11-i]:i==10?[11,1]:i<20?[11-(i-10),1]:i==20?[1,1]:i<30?[1,1+(i-20)]:i==30?[1,11]:[1+(i-30),11];
+function renderBoard(){if(!G)return;$('grid').innerHTML=B.map((s,i)=>{const o=G.own[i],[r,c]=pos(i),side=i%10==0?4:Math.floor(i/10);
+ const nm=t=>`<span class=nm${t.split(' ').some(w=>w.length>10)?' style="font-size:.65em"':''}>${t}</span>`,ic=e=>`<span class=ic>${e}</span>`,pr=t=>`<span class=pr>${t}</span>`;
+ let h='',tx;
+ if(s.t=='prop')h+=`<i class=band style="background:${COL[s.g]}">${o&&o.h?(o.h==5?'<span class="bl h"></span>':'<span class=bl></span>'.repeat(o.h)):''}</i>`;
+ switch(s.t){case'prop':tx=[nm(s.n),pr(money(s.p))];break;case'stn':tx=[nm(s.n),ic('🚂'),pr(money(s.p))];break;case'util':tx=[nm(s.n),ic(i==12?'💡':'🚰'),pr(money(s.p))];break;
+  case'tax':tx=[nm(s.n),ic('◆'),pr('Pay '+money(s.p))];break;case'cc':tx=[nm('Community Chest'),ic('📦')];break;case'ch':tx=[nm('Chance'),ic('❓')];break;
+  case'go':tx=[nm('Collect £200 salary as you pass'),ic('⬅ GO')];break;case'jail':tx=[nm('In Jail'),ic('🔒'),nm('Just Visiting')];break;
+  case'fp':tx=[nm('Free Parking'),ic('🅿')];break;default:tx=[nm('Go To Jail'),ic('👮')]}
+ h+=`<div class=tx>${tx.join('')}</div>`;
+ if(o)h+=`<span class=own style="background:${PC[o.o]}">${o.m?'M':''}</span>`;
+ h+=`<span class=tks>${G.pl.filter(p=>!p.out&&vis[p.id]==i).map(p=>p.tok).join('')}</span>`;
+ return`<div class="sq s${side}${o&&o.m?' mort':''}" style="grid-row:${r};grid-column:${c}" onclick="UI.modal='v${i}';render()">${h}</div>`}).join('')}
+function renderCtr(){const p=cp(),d=G.pend;let i='',a='';
+ i=`<b style="font-size:1.4em">${p.tok} ${p.n}</b> — ${money(p.cash)}`;
+ if(d&&d.t=='debt'){const q=G.pl[d.pid],tot=d.q.reduce((s,x)=>s+x[1],0);i=`<div style="color:#b00;font-size:1.3em"><b>DEBT: ${q.n} owes ${money(tot)}</b> to ${d.q.map(x=>x[0]=='bank'?'the bank':G.pl[x[0]].n).join(', ')}<br>Cash ${money(q.cash)}. Sell buildings, mortgage or trade.</div>`;
+  a=`<button class=big ${q.cash>=tot?'':'disabled'} onclick=payDebt()>Pay Debt</button><button onclick="UI.modal='manage';render()">Manage</button><button onclick=openTrade()>Trade</button><button class=red onclick=bankrupt()>Declare Bankruptcy</button>`}
+ else if(!d){if(G.phase=='roll'){if(p.jail){i+=` — in Jail (attempt ${p.jt+1}/3)`;a=`<button onclick=payJail()>Pay £50</button>${p.gf.length?'<button onclick=useCard()>Use Free card</button>':''}<button class=big onclick=doRoll()>Roll for doubles</button>`}else a=`<button class=big onclick=doRoll()>Roll Dice</button>`}
+  else a=`<button class=big onclick=endTurn()>End Turn</button>`}
+ if(!busy&&!can())i+=`<br>⏳ Waiting for ${(d&&d.t=='debt'?G.pl[d.pid]:d&&d.t=='au'?G.pl[d.cur]:d&&d.pid!=null?G.pl[d.pid]:cp()).n}...`;$('info').innerHTML=i;$('acts').innerHTML=busy||!can()?'':a}
+function renderSide(){$('sb').innerHTML=`<button onclick="UI.modal='manage';render()">Manage Properties</button><button onclick=openTrade()>Trade</button><button onclick=undo()>↶ Undo</button>${NET.on?'':'<button onclick=saveG()>Save</button><button onclick="$(\'imp\').click()">Import</button>'}<button onclick=expG()>Export</button><button onclick=toStart()>${NET.on?'Leave':'Menu'}</button>`;
+ let h='';if(UI.tab=='p')h=G.pl.map(p=>{const os=owned(p.id);return`<div class="pc${p.id==G.cur?' cur':''}${p.out?' out':''}"><b style="color:${PC[p.id]}">${p.tok} ${p.n}</b> ${p.out?'(bankrupt)':''}<br>Cash ${money(p.cash)} · Net worth ${money(net(p)||0)}${p.jail?' · 🔒 JAIL':''}${p.gf.length?` · 🎟 x${p.gf.length}`:''}<br>${os.map(i=>`<span class=chip style="background:${COL[B[i].g]}" onclick="UI.modal='v${i}';render()">${B[i].n.split(' ')[0]}${G.own[i].m?' M':''}${G.own[i].h?(G.own[i].h==5?' 🏨':' 🏠'+G.own[i].h):''}</span>`).join('')}</div>`}).join('')+`<div>Bank: ${G.sup.h} houses, ${G.sup.H} hotels</div>`;
+ else if(UI.tab=='l')h=`<div class=log>${G.log.slice(-300).map(l=>`<div>${l}</div>`).join('')}</div>`;
+ else h=RULES;
+ const sc=$('sc'),st=UI.tab=='l'||sc.dataset.t!=UI.tab;sc.innerHTML=h;sc.dataset.t=UI.tab;if(UI.tab=='l')sc.scrollTop=1e9}
+const RULES=`<h3>Rules</h3><ul><li>£1,500 start; £200 for passing/landing on Go. Roll two dice; doubles roll again; 3 doubles = Jail.</li><li>Unowned property: buy at list price or it goes to auction (start £1).</li><li>Rent: double on a full unmortgaged set with no buildings; stations £25/50/100/200; utilities 4x dice (one) or 10x (both). Mortgaged = no rent.</li><li>Build on full sets, evenly. 4 houses then hotel. Sell for half. Bank has 32 houses and 12 hotels.</li><li>Mortgage = half price; unmortgage = mortgage + 10%. Sell buildings first.</li><li>Jail: pay £50, use a card, or roll doubles (3 tries, then pay £50 and move). You still collect rent and can trade.</li><li>Free Parking: nothing. Taxes go to the bank.</li><li><b>Debt rule:</b> if you cannot pay, you enter debt resolution: sell buildings, mortgage, trade. Pay Debt when you have enough, or Declare Bankruptcy. Assets go to the creditor (or are auctioned if the bank).</li><li>Trades need both players to confirm; mortgaged property received costs 10% immediately.</li><li>Last player left wins.</li></ul>`;
+function viewCard(i){const s=B[i],o=G.own[i];let h=`<h3 style="border-bottom:6px solid ${COL[s.g]||'#555'}">${s.n}</h3>`;
+ if(s.p&&s.t!='tax')h+=`Price ${money(s.p)} · Mortgage ${money(s.p/2)}<br>`;
+ if(s.t=='prop')h+=`<table>${['Rent','1 house','2 houses','3 houses','4 houses','Hotel'].map((n,k)=>`<tr><td>${n}</td><td>${money(s.r[k])}</td></tr>`).join('')}</table>House cost ${money(s.hc)}<br>`;
+ if(s.t=='stn')h+='Rent £25 / £50 / £100 / £200 by stations owned.<br>';if(s.t=='util')h+='Rent 4x dice (one utility) / 10x dice (both).<br>';
+ if(s.p&&s.t!='tax')h+=o?`Owner: <b style="color:${PC[o.o]}">${G.pl[o.o].n}</b>${o.m?' (MORTGAGED)':''}${s.t=='prop'?` · ${o.h==5?'Hotel':o.h+' houses'} · Full set: ${full(o.o,s.g)?'yes':'no'}`:''}`:'Unowned';
+ return h+'<br><br><button onclick="UI.modal=null;render()">Close</button>'}
+function manageHTML(){const p=mp();let h=`<h3>${p.n}: ${money(p.cash)}</h3><table>`;
+ owned(p.id).forEach(i=>{const s=B[i],o=G.own[i];h+=`<tr><td><span class=chip style="background:${COL[s.g]}">${s.n}</span></td><td>${o.m?'M':o.h==5?'Hotel':o.h?o.h+'H':''}</td><td>${s.t=='prop'?`<button onclick=build(${i})>+Build</button><button onclick=sell(${i})>-Sell</button>`:''}${o.m?`<button onclick=unmort(${i})>Unmortgage</button>`:`<button onclick=mort(${i})>Mortgage</button>`}</td></tr>`});
+ return h+`</table><br><button onclick="UI.modal=null;render()">Close</button>`}
+function tradeHTML(){const A=G.pl[TR.a];let h='<h3>Trade</h3>With: '+active().filter(p=>p.id!=TR.a).map(p=>`<button ${TR.b==p.id?'class=big':''} onclick="TR.b=${p.id};TR.pb=[];trSet('oa',0)">${p.tok} ${p.n}</button>`).join('');
+ if(TR.b==null)return h+'<br><br><button onclick="UI.modal=null;TR=null;render()">Cancel</button>';
+ const Bp=G.pl[TR.b],side=(p,w)=>`<div style="flex:1"><b>${p.n} gives</b><br>Cash £<input type=number min=0 style="width:80px" value=${TR['c'+w]} onchange="trSet('c${w}',Math.max(0,Math.floor(+this.value||0)))"><br>Jail cards <input type=number min=0 max=${p.gf.length} style="width:50px" value=${TR['g'+w]} onchange="trSet('g${w}',+this.value||0)"><br>${owned(p.id).map(i=>`<label><input type=checkbox ${TR['p'+w].includes(i)?'checked':''} onchange="trTog('p${w}',${i},this.checked);render()"> ${B[i].n}${G.own[i].m?' (M)':''}</label><br>`).join('')}</div>`;
+ h+=`<div style="display:flex;gap:12px;margin-top:8px">${side(A,'a')}${side(Bp,'b')}</div><p>Mortgaged property received: receiver pays 10% of its mortgage value now and it stays mortgaged.</p>`;
+ h+=`<button class=big onclick="trConfirm()">Propose trade to ${Bp.n}</button> <button class=red onclick="UI.modal=null;TR=null;render()">Cancel</button>`;return h}
+function winHTML(){const w=G.pl[G.pend.w],P2=G.pl,mx=(k)=>P2.reduce((a,b)=>b[k]>a[k]?b:a),np=P2.reduce((a,b)=>owned(b.id).length>owned(a.id).length?b:a);
+ return`<h2>🏆 ${w.tok} ${w.n} wins!</h2><table><tr><td>Final net worth</td><td>${money(net(w))}</td></tr><tr><td>Turns</td><td>${G.turns}</td></tr><tr><td>Most rent paid</td><td>${mx('rp').n} ${money(mx('rp').rp)}</td></tr><tr><td>Most rent collected</td><td>${mx('rg').n} ${money(mx('rg').rg)}</td></tr><tr><td>Most properties</td><td>${np.n} (${owned(np.id).length})</td></tr><tr><td>Biggest payment</td><td>${money(G.big)} ${G.bigw?'by '+G.bigw:''}</td></tr><tr><td>Trades</td><td>${G.trades}</td></tr></table><h4>Leaderboard</h4>${[w.n].concat(G.elim.slice().reverse()).map((n,i)=>`${i+1}. ${n}<br>`).join('')}<br><button class=big onclick=toStart()>Back to start</button>`}
+function renderModal(){const m=$('modal'),d=G.pend;let h='';
+ if(d&&d.t=='win')h=winHTML();
+ else if(d&&d.t=='card'){const c=(d.k=='ch'?CH:CC)[d.ix],p=G.pl[d.pid];h=`<h3 style="color:${d.k=='ch'?'#f0a023':'#7cf'}">${d.k=='ch'?'❓ Chance':'📦 Community Chest'}</h3><p style="font-size:1.3em;max-width:380px">${c[0]}</p><b>${p.tok} ${p.n}</b><br><br><button class=big onclick=takeCard()>Take card</button> <button onclick=undo()>↶ Undo</button>`}
+ else if(d&&d.t=='buy'){const s=B[d.i],p=G.pl[d.pid];h=viewCard(d.i).replace(/<br><br><button.*$/,'')+`<br><br>${p.n} has ${money(p.cash)}.<br><button class=big ${p.cash<s.p?'disabled':''} onclick=buy()>Buy for ${money(s.p)}</button> <button onclick=decline()>Auction</button> <button onclick=undo()>↶ Undo</button>`}
+ else if(d&&d.t=='au'){const p=G.pl[d.cur];h=`<h3>Auction: ${B[d.i].n}</h3>List ${money(B[d.i].p)}<br>Current bid: <b>${money(d.bid)}</b> ${d.hi!=null?'by '+G.pl[d.hi].n:''}<br><br><b style="color:${PC[p.id]}">${p.tok} ${p.n}</b> (cash ${money(p.cash)}) — your bid: £<input id=bidv type=number min=1 value=${d.bid+1} style="width:90px"> <button onclick=bid()>Bid</button> <button onclick=passBid()>Pass</button> <button onclick=undo()>↶ Undo</button>`}
+ else if(G.tr){const t=G.tr,A=G.pl[t.a],Bp=G.pl[t.b],m2=me(),li=(ps,c,g)=>`${money(c)}${ps.length?', '+ps.map(i=>B[i].n+(G.own[i].m?' (M)':'')).join(', '):''}${g?', '+g+' Jail card(s)':''}`;
+  h=`<h3>Trade proposal</h3><b>${A.n}</b> gives: ${li(t.pa,t.ca,t.ga)}<br><b>${Bp.n}</b> gives: ${li(t.pb,t.cb,t.gb)}<p>Mortgaged property received costs 10% of its mortgage value immediately and stays mortgaged.</p>`+(!NET.on||(m2&&m2.id==t.b)?`<button class=big onclick=trExec()>Accept</button> <button onclick=trDecline()>Decline</button>`:(m2&&m2.id==t.a?`Waiting for ${Bp.n}... <button class=red onclick=trDecline()>Cancel</button>`:`Waiting for ${Bp.n}...`))}
+ else if(UI.modal&&UI.modal[0]=='v')h=viewCard(+UI.modal.slice(1));
+ else if(UI.modal=='manage')h=manageHTML();else if(UI.modal=='trade'&&TR)h=tradeHTML();
+ if(h&&d&&['card','buy','au'].includes(d.t)&&!can()){h=h.replace(/<button[\s\S]*?<\/button>/g,'').replace(/<input[^>]*>/g,'');h+=`<p>⏳ Waiting for ${(d.t=='au'?G.pl[d.cur]:G.pl[d.pid]).n}...</p>`}
+ m.style.display=h?'flex':'none';if(h&&m.dataset.h!=h){m.innerHTML=`<div class=mc>${h}</div>`;m.dataset.h=h}else if(!h)m.dataset.h=''}
+function render(){if(!G)return;renderBoard();renderCtr();renderSide();renderModal()}
+
+/* ===== START SCREEN, SAVE / LOAD ===== */
+function toStart(){if(G&&!confirm('Leave the game?'))return;if(NET.on){NET.on=false;location.reload();return}showStart()}
+function showStart(){const s=$('start');s.style.display='flex';$('modal').style.display='none';
+ let ld='';try{ld=localStorage.getItem('ptsave')?'<button onclick=loadG()>Load Saved Game</button>':''}catch(e){}
+ s.innerHTML=`<div class=mc><h1 style="color:#7cf;margin-top:0">PROPERTY TYCOON</h1>Players: <select id=np onchange=startRows()>${[2,3,4,5,6,7,8].map(n=>`<option>${n}</option>`).join('')}</select><div id=rows></div><br><button class=big onclick=newGame()>New Game</button> ${ld} <button onclick="$('imp').click()">Import Save</button><hr><b>Play online (each friend on their own laptop)</b><br><input id=on placeholder="Your name" maxlength=14> <select id=ot>${TOKS.map(t=>`<option>${t}</option>`).join('')}</select> <input id=or placeholder="Room code" maxlength=8 style="width:90px"> <button class=big onclick=joinOnline()>Join / Create room</button></div>`;startRows()}
+function startRows(){const n=+$('np').value;$('rows').innerHTML=Array.from({length:n},(_,i)=>`<div style="margin:4px 0"><input id=pn${i} value="Player ${i+1}" maxlength=14> <select id=pt${i}>${TOKS.map((t,k)=>`<option ${k==i?'selected':''}>${t}</option>`).join('')}</select></div>`).join('')}
+/* Creates a fresh game state with random turn order and shuffled decks */
+function newGame(L){const n=L?L.length:+$('np').value,ns=[],ts=[],cs=[];for(let i=0;i<n;i++){if(L){ns.push(L[i].name);ts.push(L[i].tok);cs.push(L[i].cid)}else{ns.push($('pn'+i).value.trim()||'Player '+(i+1));ts.push($('pt'+i).value)}}
+ if(new Set(ts).size<n)return err('Each player needs a unique token.');if(new Set(ns).size<n)return err('Player names must differ.');
+ const ord=shuf([...Array(n).keys()]);
+ G={pl:ord.map((k,i)=>({id:i,cid:cs[k],n:ns[k],tok:ts[k],cash:1500,pos:0,jail:false,jt:0,gf:[],out:false,rp:0,rg:0})),cur:0,own:{},dk:{ch:shuf([...Array(16).keys()]),cc:shuf([...Array(16).keys()])},sup:{h:32,H:12},nx:[r6(),r6()],d:[1,1],dbl:0,phase:'roll',pend:null,qd:[],aq:[],log:[],turns:1,big:0,bigw:'',trades:0,elim:[]};
+ H=[];AQ=[];syncVis();$('start').style.display='none';log('Turn order: '+G.pl.map(p=>p.tok+' '+p.n).join(' → '));showDice(G.d);render();if(L)netState(null,0,1)}
+function saveG(){try{localStorage.setItem('ptsave',JSON.stringify({G,H}));toast('Game saved.')}catch(e){err('Save failed: '+e.message)}}
+function applySave(t){try{const o=JSON.parse(t);if(!o.G||!o.G.pl)throw Error('not a valid save file');G=o.G;H=o.H||[];AQ=[];TR=null;UI.modal=null;syncVis();$('start').style.display='none';showDice(G.d);render();toast('Game loaded.')}catch(e){err('Load failed: '+e.message)}}
+function loadG(){try{applySave(localStorage.getItem('ptsave'))}catch(e){err('Load failed: '+e.message)}}
+function expG(){try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({G,H})],{type:'application/json'}));a.download='property-tycoon-save.json';a.click()}catch(e){err('Export failed: '+e.message)}}
+$('imp').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>applySave(r.result);r.onerror=()=>err('Could not read file.');r.readAsText(f);e.target.value=''};
+initDice();showStart();
+</script></body></html>
