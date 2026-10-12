@@ -40,7 +40,7 @@ table{border-collapse:collapse}td{padding:2px 8px;border-bottom:1px solid #333}.
 <div id=dice><div class=die id=d0></div><div class=die id=d1></div></div><div id=info></div><div id=acts></div></div></div></div>
 <div id=side><div id=sb></div><div id=tabs><button onclick="UI.tab='p';render()">Players</button><button onclick="UI.tab='l';render()">Log</button><button onclick="UI.tab='r';render()">Rules</button></div><div id=sc></div></div>
 <div id=modal></div><div id=cf></div><div id=toast></div><div id=start></div>
-<input type=file id=imp accept=".json" style="display:none">
+<input type=file id=imp accept=".json" style="display:none"><input type=file id=imp2 accept=".json" style="display:none">
 <script>
 /* ===== DATA: board (UK edition). p=price, r=rent[base,1h,2h,3h,4h,hotel], hc=house cost. Mortgage = p/2 ===== */
 const P=(n,p,g,r,hc)=>({n,t:'prop',p,g,r,hc}),S=n=>({n,t:'stn',p:200,g:'st'}),U=n=>({n,t:'util',p:150,g:'ut'}),X=(n,t,p)=>({n,t,p});
@@ -96,11 +96,16 @@ function can(){if(!NET.on)return true;const m=me();if(!m||!G)return false;const 
  if(d){if(d.t=='au')return d.cur==m.id;if(d.t=='debt')return d.pid==m.id;if(d.t=='win')return true;return d.pid==m.id}
  return G.cur==m.id}
 function connect(){const ws=NET.ws=new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host);
- ws.onopen=()=>wsend({t:'join',room:NET.room,cid:NET.cid,name:NET.name,tok:NET.tok});
+ ws.onopen=()=>{wsend(NET.resume?{t:'resume',room:NET.room,cid:NET.cid,name:NET.name,tok:NET.tok,G:NET.resume}:{t:'join',room:NET.room,cid:NET.cid,name:NET.name,tok:NET.tok});NET.resume=null};
  ws.onmessage=e=>onMsg(JSON.parse(e.data));
  ws.onerror=()=>{if(!NET.on)err('Could not connect. Open the hosted website link (not the file) to play online.')};
  ws.onclose=()=>{if(NET.on){toast('Disconnected. Reconnecting...',1);setTimeout(connect,2000)}}}
 setInterval(()=>wsend({t:'ping'}),25000);
+/* Resume an exported save online: host loads the file, friends then join the room using the same names as in the save */
+function resumeOnline(txt){try{const o=JSON.parse(txt);if(!o.G||!o.G.pl)throw Error('not a valid save file');
+ NET.name=($('on').value.trim()||'').slice(0,14);const names=o.G.pl.map(p=>p.n);
+ if(!names.includes(NET.name))return err('Type your name exactly as it is in the save: '+names.join(', '));
+ NET.tok=$('ot').value;NET.room=($('or').value.trim()||Math.random().toString(36).slice(2,6)).toUpperCase();NET.resume=o.G;connect()}catch(e){err('Resume failed: '+e.message)}}
 function joinOnline(){NET.name=($('on').value.trim()||'Player').slice(0,14);NET.tok=$('ot').value;NET.room=($('or').value.trim()||Math.random().toString(36).slice(2,6)).toUpperCase();connect()}
 function startOnline(){newGame(NET.lobby.players.map((p,i)=>({name:p.name,tok:p.tok,cid:i})))}
 function showLobby(m){NET.on=true;NET.lobby=m;NET.you=m.you;const s=$('start');s.style.display='flex';
@@ -298,7 +303,7 @@ function render(){if(!G)return;renderBoard();renderCtr();renderSide();renderModa
 function toStart(){if(G&&!confirm('Leave the game?'))return;if(NET.on){NET.on=false;location.reload();return}showStart()}
 function showStart(){const s=$('start');s.style.display='flex';$('modal').style.display='none';
  let ld='';try{ld=localStorage.getItem('ptsave')?'<button onclick=loadG()>Load Saved Game</button>':''}catch(e){}
- s.innerHTML=`<div class=mc><h1 style="color:#7cf;margin-top:0">PROPERTY TYCOON</h1>Players: <select id=np onchange=startRows()>${[2,3,4,5,6,7,8].map(n=>`<option>${n}</option>`).join('')}</select><div id=rows></div><br><button class=big onclick=newGame()>New Game</button> ${ld} <button onclick="$('imp').click()">Import Save</button><hr><b>Play online (each friend on their own laptop)</b><br><input id=on placeholder="Your name" maxlength=14> <select id=ot>${TOKS.map(t=>`<option>${t}</option>`).join('')}</select> <input id=or placeholder="Room code" maxlength=8 style="width:90px"> <button class=big onclick=joinOnline()>Join / Create room</button></div>`;startRows()}
+ s.innerHTML=`<div class=mc><h1 style="color:#7cf;margin-top:0">PROPERTY TYCOON</h1>Players: <select id=np onchange=startRows()>${[2,3,4,5,6,7,8].map(n=>`<option>${n}</option>`).join('')}</select><div id=rows></div><br><button class=big onclick=newGame()>New Game</button> ${ld} <button onclick="$('imp').click()">Import Save</button><hr><b>Play online (each friend on their own laptop)</b><br><input id=on placeholder="Your name" maxlength=14> <select id=ot>${TOKS.map(t=>`<option>${t}</option>`).join('')}</select> <input id=or placeholder="Room code" maxlength=8 style="width:90px"> <button class=big onclick=joinOnline()>Join / Create room</button><br><br><button onclick="$('imp2').click()">Resume a saved game online</button><br><small>Type your name exactly as in the save and a new room code, then pick the file. Friends join that room with their saved names.</small></div>`;startRows()}
 function startRows(){const n=+$('np').value;$('rows').innerHTML=Array.from({length:n},(_,i)=>`<div style="margin:4px 0"><input id=pn${i} value="Player ${i+1}" maxlength=14> <select id=pt${i}>${TOKS.map((t,k)=>`<option ${k==i?'selected':''}>${t}</option>`).join('')}</select></div>`).join('')}
 /* Creates a fresh game state with random turn order and shuffled decks */
 function newGame(L){const n=L?L.length:+$('np').value,ns=[],ts=[],cs=[];for(let i=0;i<n;i++){if(L){ns.push(L[i].name);ts.push(L[i].tok);cs.push(L[i].cid)}else{ns.push($('pn'+i).value.trim()||'Player '+(i+1));ts.push($('pt'+i).value)}}
@@ -325,5 +330,6 @@ function bid(){const a=Math.floor(+$('bidv').value);ask(`Bid ${money(a)} on <b>$
 function trConfirm(){if(!TR||TR.b==null)return err('Pick a player to trade with.');ask('Send this trade proposal?',trConfirmDo)}
 function trExec(){ask('Accept this trade?',trExecDo)}
 function bankrupt(){ask('Declare bankruptcy? You will be out of the game.',bankruptDo)}
+$('imp2').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>resumeOnline(r.result);r.readAsText(f);e.target.value=''};
 initDice();showStart();
 </script></body></html>
