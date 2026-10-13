@@ -54,7 +54,7 @@ P('Leicester Square',260,'yl',R5,150),P('Coventry Street',260,'yl',R5,150),U('Wa
 P('Regent Street',300,'gr',R6,200),P('Oxford Street',300,'gr',R6,200),X('Community Chest','cc'),P('Bond Street',320,'gr',[28,150,450,1000,1200,1400],200),S('Liverpool Street Station'),X('Chance','ch'),
 P('Park Lane',350,'db',[35,175,500,1100,1300,1500],200),X('Super Tax','tax',100),P('Mayfair',400,'db',[50,200,600,1400,1700,2000],200)];
 const COL={br:'#7b2832',lb:'#1f9be0',pk:'#ee2a7b',or:'#f0a023',rd:'#e22b2b',yl:'#e4e02f',gr:'#26a54a',db:'#3b63ad',st:'#999',ut:'#bbb'};
-const PC=['#e55','#5ae','#5d5','#fc3','#c7f','#f93','#3dc','#ccc'],TOKS=['🤤','🥵','🥶','😫','😈','🤬','🧑🏿‍🦲','🚕'];
+const PC=['#e55','#5ae','#5d5','#fc3','#c7f','#f93','#3dc','#ccc'],TOKS=['🧑🏿‍🦲','😫','🤤','🥵','🥶','😈','🤬','🚕'];
 /* Cards: [text, code, a, b]. to=advance, nu/ns=nearest utility/station, c=cash, gf=jail card, b3=back 3, gj=jail, rp=repairs, ep=pay each, eg=collect from each */
 const CH=[['Advance to Go (collect £200)','to',0],['Advance to Trafalgar Square. If you pass Go, collect £200','to',24],['Advance to Pall Mall. If you pass Go, collect £200','to',11],
 ['Advance to nearest Utility. If unowned you may buy it; if owned, throw dice and pay owner 10x the throw','nu'],['Advance to nearest Station: pay owner double rent, or buy if unowned','ns'],['Advance to nearest Station: pay owner double rent, or buy if unowned','ns'],
@@ -296,6 +296,7 @@ function renderModal(){const m=$('modal'),d=G.pend;let h='';
  else if(UI.modal&&UI.modal[0]=='v')h=viewCard(+UI.modal.slice(1));
  else if(UI.modal=='manage')h=manageHTML();else if(UI.modal=='trade'&&TR)h=tradeHTML();
  if(h&&d&&['card','buy','au'].includes(d.t)&&!can()){h=h.replace(/<button[\s\S]*?<\/button>/g,'').replace(/<input[^>]*>/g,'');h+=`<p>⏳ Waiting for ${(d.t=='au'?G.pl[d.cur]:G.pl[d.pid]).n}...</p>`}
+ if(h&&d&&['card','buy','au'].includes(d.t))h+='<br><br><button onclick=expG()>Export save</button>';
  m.style.display=h?'flex':'none';if(h&&m.dataset.h!=h){m.innerHTML=`<div class=mc>${h}</div>`;m.dataset.h=h}else if(!h)m.dataset.h=''}
 function render(){if(!G)return;renderBoard();renderCtr();renderSide();renderModal()}
 
