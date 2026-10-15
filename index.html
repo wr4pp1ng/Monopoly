@@ -1,28 +1,28 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>Property Tycoon</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#12141a;color:#e6e8ee;font:13px system-ui,sans-serif;display:flex;height:100vh;overflow:hidden}
+*{box-sizing:border-box}body{margin:0;background:#12141a;color:#e6e8ee;font:15px system-ui,sans-serif;display:flex;height:100vh;overflow:hidden}
 #bw{flex:1;display:flex;align-items:center;justify-content:center}
-#board{--b:min(96vh,calc(100vw - 390px));width:var(--b);height:var(--b);position:relative;font-size:calc(var(--b)/95)}
+#board{--b:min(96vh,calc(100vw - 430px));width:var(--b);height:var(--b);position:relative;font-size:calc(var(--b)/95)}
 #grid{position:absolute;inset:0;display:grid;grid-template:1.5fr repeat(9,1fr) 1.5fr/1.5fr repeat(9,1fr) 1.5fr;background:#cde6d0;border:2px solid #111}
-.sq{position:relative;overflow:hidden;cursor:pointer;display:flex;color:#111;border:1px solid #111;font-size:.9em;background:#cde6d0}
-.s0{flex-direction:column}.s2{flex-direction:column-reverse}.s1{flex-direction:row-reverse}.s3{flex-direction:row}.s4{flex-direction:column;font-size:1.1em}
+.sq{position:relative;overflow:hidden;cursor:pointer;display:flex;color:#111;border:1px solid #111;font-size:1.05em;background:#cde6d0}
+.s0{flex-direction:column}.s2{flex-direction:column-reverse}.s1{flex-direction:row-reverse}.s3{flex-direction:row}.s4{flex-direction:column;font-size:1.3em}
 .sq:hover{background:#b9d6bc}.sq.mort{filter:grayscale(1);opacity:.55}
 .band{flex:0 0 22%;display:flex;align-items:center;justify-content:center;gap:1px;border:1px solid #111}.s1 .band,.s3 .band{flex-direction:column}
 .tx{flex:1;display:flex;flex-direction:column;justify-content:space-between;align-items:center;text-align:center;padding:2px;min-width:0;min-height:0}
 .s1 .tx,.s3 .tx{writing-mode:vertical-rl}.s3 .tx,.s2 .tx{transform:rotate(180deg)}
-.nm{font-weight:600;text-transform:uppercase;line-height:1.05;font-size:.85em;overflow-wrap:anywhere}.pr{font-size:.8em}.ic{font-size:1.9em;line-height:1}
-.bl{width:.9em;height:.9em;background:#2fa84f;border:1px solid #000}.bl.h{background:#e03c3c;width:1.8em}
-.own{position:absolute;right:2px;bottom:2px;width:1.2em;height:1.2em;border-radius:50%;border:1px solid #000;font-size:.8em;color:#000;font-weight:bold;line-height:1.1em;text-align:center}
-.tks{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);font-size:1.7em;line-height:1;text-shadow:0 0 3px #fff;white-space:nowrap}
+.nm{font-weight:600;text-transform:uppercase;line-height:1.05;font-size:1em;overflow-wrap:anywhere}.pr{font-size:.95em}.ic{font-size:2.4em;line-height:1}
+.bl{width:1.1em;height:1.1em;background:#2fa84f;border:1px solid #000}.bl.h{background:#e03c3c;width:2.2em}
+.own{position:absolute;right:2px;bottom:2px;width:1.5em;height:1.5em;border-radius:50%;border:1px solid #000;font-size:.9em;color:#000;font-weight:bold;line-height:1.3em;text-align:center}
+.tks{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);font-size:2.4em;line-height:1;text-shadow:0 0 3px #fff;white-space:nowrap}
 #ctr{position:absolute;left:12.5%;top:12.5%;width:75%;height:75%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8em;text-align:center;padding:1em;color:#111}
-#ctr h1{margin:0;font-size:3em;letter-spacing:.05em;color:#fff;background:#d9262c;padding:.2em .6em;border:3px solid #fff;outline:3px solid #d9262c;text-shadow:2px 2px 0 #111}
+#ctr h1{margin:0;font-size:3.4em;letter-spacing:.05em;color:#fff;background:#d9262c;padding:.2em .6em;border:3px solid #fff;outline:3px solid #d9262c;text-shadow:2px 2px 0 #111}
 .card{position:absolute;width:30%;height:16%;border:2px dashed #111;border-radius:6px;opacity:.5;display:flex;align-items:center;justify-content:center;font-weight:bold;letter-spacing:.1em}
 #dice{display:flex;gap:30px;perspective:500px;height:70px;align-items:center}
 .die{width:56px;height:56px;position:relative;transform-style:preserve-3d;transition:transform 1s ease-out}
 .f{position:absolute;width:56px;height:56px;background:#eee;color:#111;font-size:48px;line-height:56px;text-align:center;border-radius:8px}
 .f1{transform:translateZ(28px)}.f6{transform:rotateY(180deg) translateZ(28px)}.f2{transform:rotateY(90deg) translateZ(28px)}.f5{transform:rotateY(-90deg) translateZ(28px)}.f3{transform:rotateX(90deg) translateZ(28px)}.f4{transform:rotateX(-90deg) translateZ(28px)}
-#side{width:380px;background:#171a22;border-left:1px solid #000;display:flex;flex-direction:column;height:100vh}
+#side{width:420px;background:#171a22;border-left:1px solid #000;display:flex;flex-direction:column;height:100vh}
 #sb{padding:6px;display:flex;flex-wrap:wrap;gap:4px}#tabs{display:flex}#tabs button{flex:1}
 #sc{flex:1;overflow:auto;padding:6px}
 button,.b{background:#2c3342;color:#e6e8ee;border:1px solid #444c60;border-radius:5px;padding:5px 9px;cursor:pointer;font:inherit}
@@ -37,7 +37,7 @@ button:hover{background:#3a4358}button:disabled{opacity:.4;cursor:default}.big{f
 table{border-collapse:collapse}td{padding:2px 8px;border-bottom:1px solid #333}.log div{border-bottom:1px solid #222;padding:2px 0}
 </style></head><body>
 <div id=bw><div id=board><div id=grid></div><div id=ctr><div class=card style="left:6%;top:9%;transform:rotate(35deg)">CHANCE</div><div class=card style="right:6%;bottom:9%;transform:rotate(35deg)">COMMUNITY CHEST</div><h1>PROPERTY TYCOON</h1>
-<div id=dice><div class=die id=d0></div><div class=die id=d1></div></div><div id=info></div><div id=acts></div></div></div></div>
+<div id=dice><div class=die id=d0></div><div class=die id=d1></div></div><div id=info style='font-size:1.25em'></div><div id=acts></div></div></div></div>
 <div id=side><div id=sb></div><div id=tabs><button onclick="UI.tab='p';render()">Players</button><button onclick="UI.tab='l';render()">Log</button><button onclick="UI.tab='r';render()">Rules</button></div><div id=sc></div></div>
 <div id=modal></div><div id=cf></div><div id=toast></div><div id=start></div>
 <input type=file id=imp accept=".json" style="display:none"><input type=file id=imp2 accept=".json" style="display:none">
@@ -246,7 +246,7 @@ async function anim(){if(animating)return;animating=true;while(AQ.length){const 
 /* ===== RENDERING ===== */
 const pos=i=>i==0?[11,11]:i<10?[11,11-i]:i==10?[11,1]:i<20?[11-(i-10),1]:i==20?[1,1]:i<30?[1,1+(i-20)]:i==30?[1,11]:[1+(i-30),11];
 function renderBoard(){if(!G)return;$('grid').innerHTML=B.map((s,i)=>{const o=G.own[i],[r,c]=pos(i),side=i%10==0?4:Math.floor(i/10);
- const nm=t=>`<span class=nm${t.split(' ').some(w=>w.length>10)?' style="font-size:.65em"':''}>${t}</span>`,ic=e=>`<span class=ic>${e}</span>`,pr=t=>`<span class=pr>${t}</span>`;
+ const nm=t=>`<span class=nm${t.split(' ').some(w=>w.length>10)?' style="font-size:.78em"':''}>${t}</span>`,ic=e=>`<span class=ic>${e}</span>`,pr=t=>`<span class=pr>${t}</span>`;
  let h='',tx;
  if(s.t=='prop')h+=`<i class=band style="background:${COL[s.g]}">${o&&o.h?(o.h==5?'<span class="bl h"></span>':'<span class=bl></span>'.repeat(o.h)):''}</i>`;
  switch(s.t){case'prop':tx=[nm(s.n),pr(money(s.p))];break;case'stn':tx=[nm(s.n),ic('🚂'),pr(money(s.p))];break;case'util':tx=[nm(s.n),ic(i==12?'💡':'🚰'),pr(money(s.p))];break;
