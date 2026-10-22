@@ -196,7 +196,7 @@ function pay(pid,list,why,rf){const p=G.pl[pid],tot=list.reduce((s,x)=>s+x[1],0)
 function exec(p,list,rf){list.forEach(([to,a])=>{p.cash-=a;if(to!='bank')G.pl[to].cash+=a;if(rf){p.rp+=a;if(to!='bank')G.pl[to].rg+=a}if(a>G.big){G.big=a;G.bigw=p.n}log(`${p.n} pays ${money(a)} to ${to=='bank'?'the bank':G.pl[to].n}.`)})}
 /* Processes queued payments/moves until something needs player input */
 function drain(){while(!G.pend&&G.qd.length){const q=G.qd.shift();if(G.pl[q[1]].out)continue;if(q[0]=='pay')pay(q[1],q[2],q[3]);else step(G.pl[q[1]],q[2])}}
-function after(){drain();checkWin();if(!G.pend&&G.aq.length)startAuction(G.aq.shift())}
+function after(){drain();if(!G.pend&&G.aq.length){startAuction(G.aq.shift());return}checkWin()}
 function checkWin(){if(!G.pend&&active().length==1)G.pend={t:'win',w:active()[0].id}}
 function afterRoll(d){const p=cp(),sum=d[0]+d[1],db=d[0]==d[1];log(`${p.n} rolled ${d[0]} + ${d[1]} = ${sum}${db?' (doubles)':''}.`);
  if(p.jail){G.phase='post';if(db){p.jail=false;p.jt=0;log('Doubles! Out of jail (no extra roll).');step(p,sum)}
@@ -223,9 +223,26 @@ function passBid(){act(()=>{const A=G.pend;log(`${G.pl[A.cur].n} passes.`);A.pas
 /* ---- debt ---- */
 function payDebt(){act(()=>{const d=G.pend,p=G.pl[d.pid];if(p.cash<d.q.reduce((s,x)=>s+x[1],0))return err('Still short of cash.');exec(p,d.q,d.why&&d.why.startsWith('Rent'));G.pend=null;after()})}
 function bankruptDo(){act(()=>{const d=G.pend,p=G.pl[d.pid],cr=d.q[0][0];
- owned(p.id).forEach(i=>{const o=G.own[i];if(o.h){p.cash+=B[i].hc*(o.h==5?5:o.h)/2;if(o.h==5)G.sup.H++;else G.sup.h+=o.h;o.h=0}});
- if(cr=='bank'){owned(p.id).forEach(i=>{delete G.own[i];G.aq.push(i)});p.gf.forEach(k=>G.dk[k].push(k=='ch'?7:4))}
- else{const c=G.pl[cr];c.cash+=p.cash;owned(p.id).forEach(i=>{G.own[i].o=cr;if(G.own[i].m){const f=Math.min(c.cash,Math.ceil(B[i].p/20));c.cash-=f;log(`${c.n} pays ${money(f)} (10%) on mortgaged ${B[i].n}.`)}});c.gf.push(...p.gf)}
+ if(cr=='bank'){
+  // The bank buys back buildings at half cost and properties at face value
+  // (or half face value if mortgaged). Liquidation proceeds go to survivors.
+  let proceeds=0;const assets=owned(p.id);
+  assets.forEach(i=>{const o=G.own[i],s=B[i];
+   if(o.h){const buildingValue=s.hc*(o.h==5?5:o.h)/2;proceeds+=buildingValue;
+    log(`Bank buys back ${o.h==5?'hotel':o.h+' house(s)'} on ${s.n} for ${money(buildingValue)} (half value).`);
+    if(o.h==5)G.sup.H++;else G.sup.h+=o.h;o.h=0;
+   }
+   const propertyValue=o.m?s.p/2:s.p;proceeds+=propertyValue;
+   log(`Bank buys ${s.n} for ${money(propertyValue)}${o.m?' (mortgaged, half face value)':' (full face value)'}.`);
+   delete G.own[i];G.aq.push(i);
+  });
+  const recipients=active().filter(x=>x.id!==p.id);
+  if(recipients.length){const each=Math.floor(proceeds/recipients.length),remainder=proceeds%recipients.length;
+   recipients.forEach((r,i)=>{const share=each+(i<remainder?1:0);r.cash+=share;});
+   log(`Bankruptcy liquidation proceeds of ${money(proceeds)} split among ${recipients.length} surviving player(s): ${recipients.map((r,i)=>`${r.n} ${money(each+(i<remainder?1:0))}`).join(', ')}.`);
+  }else log(`Bankruptcy liquidation produced ${money(proceeds)}, but no surviving players remain to receive it.`);
+  p.gf.forEach(k=>G.dk[k].push(k=='ch'?7:4));
+ }else{const c=G.pl[cr];c.cash+=p.cash;owned(p.id).forEach(i=>{G.own[i].o=cr;if(G.own[i].m){const f=Math.min(c.cash,Math.ceil(B[i].p/20));c.cash-=f;log(`${c.n} pays ${money(f)} (10%) on mortgaged ${B[i].n}.`)}});c.gf.push(...p.gf)}
  p.cash=0;p.gf=[];p.out=true;G.elim.push(p.n);log(`${p.n} is BANKRUPT.`);G.pend=null;G.qd=G.qd.filter(x=>x[1]!=p.id);
  if(G.cur==p.id){let n=G.cur;do n=(n+1)%G.pl.length;while(G.pl[n].out&&active().length>1);G.cur=n;G.phase='roll';G.dbl=0;G.turns++}after()})}
 /* ---- building & mortgages (acts on the player who is current, or the debtor) ---- */
@@ -296,7 +313,7 @@ function renderSide(){$('sb').innerHTML=`<button onclick="UI.modal='manage';rend
  else if(UI.tab=='l')h=`<div class=log>${G.log.slice(-300).map(l=>`<div>${l}</div>`).join('')}</div>`;
  else h=RULES;
  const sc=$('sc'),st=UI.tab=='l'||sc.dataset.t!=UI.tab;sc.innerHTML=h;sc.dataset.t=UI.tab;if(UI.tab=='l')sc.scrollTop=1e9}
-const RULES=`<h3>Rules</h3><ul><li>£1,500 start; £200 for passing/landing on Go. Roll two dice; doubles roll again; 3 doubles = Jail.</li><li>Unowned property: buy at list price or it goes to auction (start £1).</li><li>Rent: double on a full unmortgaged set with no buildings; stations £25/50/100/200; utilities 4x dice (one) or 10x (both). Mortgaged = no rent.</li><li>Build on full sets, evenly. 4 houses then hotel. Sell for half. Bank has 32 houses and 12 hotels.</li><li>Mortgage = half price; unmortgage = mortgage + 10%. Sell buildings first.</li><li>Jail: pay £50, use a card, or roll doubles (3 tries, then pay £50 and move). You still collect rent and can trade.</li><li>Free Parking: nothing. Taxes go to the bank.</li><li><b>Debt rule:</b> if you cannot pay, you enter debt resolution: sell buildings, mortgage, trade. Pay Debt when you have enough, or Declare Bankruptcy. Assets go to the creditor (or are auctioned if the bank).</li><li>Trades need both players to confirm; mortgaged property received costs 10% immediately.</li><li>Last player left wins.</li></ul>`;
+const RULES=`<h3>Rules</h3><ul><li>£1,500 start; £200 for passing/landing on Go. Roll two dice; doubles roll again; 3 doubles = Jail.</li><li>Unowned property: buy at list price or it goes to auction (start £1).</li><li>Rent: double on a full unmortgaged set with no buildings; stations £25/50/100/200; utilities 4x dice (one) or 10x (both). Mortgaged = no rent.</li><li>Build on full sets, evenly. 4 houses then hotel. Sell for half. Bank has 32 houses and 12 hotels.</li><li>Mortgage = half price; unmortgage = mortgage + 10%. Sell buildings first.</li><li>Jail: pay £50, use a card, or roll doubles (3 tries, then pay £50 and move). You still collect rent and can trade.</li><li>Free Parking: nothing. Taxes go to the bank.</li><li><b>Debt rule:</b> if you cannot pay, you enter debt resolution: sell buildings, mortgage, trade. Pay Debt when you have enough, or Declare Bankruptcy. If bankrupt to the bank, buildings are bought back at half cost and properties at face value (half if mortgaged); the proceeds are split as evenly as possible among surviving players, then the properties are auctioned by the bank. If bankrupt to another player, assets go to that creditor.</li><li>Trades need both players to confirm; mortgaged property received costs 10% immediately.</li><li>Last player left wins.</li></ul>`;
 function viewCard(i){const s=B[i],o=G.own[i];let h=`<h3 style="border-bottom:6px solid ${COL[s.g]||'#555'}">${s.n}</h3>`;
  if(s.p&&s.t!='tax')h+=`Price ${money(s.p)} · Mortgage ${money(s.p/2)}<br>`;
  if(s.t=='prop')h+=`<table>${['Rent','1 house','2 houses','3 houses','4 houses','Hotel'].map((n,k)=>`<tr><td>${n}</td><td>${money(s.r[k])}</td></tr>`).join('')}</table>House cost ${money(s.hc)}<br>`;
