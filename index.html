@@ -359,7 +359,7 @@ function render(){if(!G)return;renderBoard();renderCtr();renderSide();renderModa
 
 /* ===== START SCREEN, SAVE / LOAD ===== */
 function toStart(){if(G&&!confirm('Leave the game?'))return;if(NET.on){NET.on=false;location.reload();return}showStart()}
-function showStart(){closeRentFx();closeJailFx();const s=$('start');s.style.display='flex';$('modal').style.display='none';
+function showStart(){closeRentFx();closeJailFx();const s=$('start');s.style.setProperty('display','flex','important');s.style.visibility='visible';s.style.opacity='1';$('modal').style.display='none';
  let ld='';try{ld=localStorage.getItem('ptsave')?'<button onclick=loadG()>Load Saved Game</button>':''}catch(e){}
  s.innerHTML=`<div class=mc><h1 style="color:#7cf;margin-top:0">PROPERTY TYCOON</h1>Players: <select id=np onchange=startRows()>${[2,3,4,5,6,7,8].map(n=>`<option>${n}</option>`).join('')}</select><div id=rows></div><br><button class=big onclick=newGame()>New Game</button> ${ld} <button onclick="$('imp').click()">Import Save</button><hr><b>Play online (each friend on their own laptop)</b><br><input id=on placeholder="Your name" maxlength=14> <select id=ot>${TOKS.map(t=>`<option>${t}</option>`).join('')}</select> <input id=or placeholder="Room code" maxlength=8 style="width:90px"> <button class=big onclick=joinOnline()>Join / Create room</button><br><br><button onclick="$('imp2').click()">Resume a saved game online</button><br><small>Type your name exactly as in the save and a new room code, then pick the file. Friends join that room with their saved names.</small></div>`;startRows()}
 function startRows(){const n=+$('np').value;$('rows').innerHTML=Array.from({length:n},(_,i)=>`<div style="margin:4px 0"><input id=pn${i} value="Player ${i+1}" maxlength=14> <select id=pt${i}>${TOKS.map((t,k)=>`<option ${k==i?'selected':''}>${t}</option>`).join('')}</select></div>`).join('')}
@@ -390,6 +390,6 @@ function trExec(){ask('Accept this trade?',trExecDo)}
 function bankrupt(){ask('Declare bankruptcy? You will be out of the game.',bankruptDo)}
 $('imp2').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>resumeOnline(r.result);r.readAsText(f);e.target.value=''};
 initDice();
-// Make sure animation overlays never cover the initial start menu after a reload.
-['rentfx','jailfx'].forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('show');el.style.setProperty('display','none','important')}});
-showStart();
+// Always construct and reveal the start menu on a fresh page load.
+// Use DOMContentLoaded as a fallback in case startup runs before the page is ready.
+function bootStartMenu(){try{showStart()}catch(e){console.error('Could not initialise Property Tycoon start menu:',e);const s=document.getElementById('start');if(s){s.innerHTML='<div class=mc><h1>PROPERTY TYCOON</h1><p>The start menu failed to initialise.</p><button onclick=location.reload()>Reload</button></div>';s.style.setProperty('display','flex','important')}}}
