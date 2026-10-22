@@ -30,6 +30,8 @@ button:hover{background:#3a4358}button:disabled{opacity:.4;cursor:default}.big{f
 .pc{border:1px solid #333;border-radius:6px;padding:5px;margin-bottom:6px}.pc.cur{border-color:#7cf;background:#1c2433}.pc.out{opacity:.4}
 .chip{display:inline-block;padding:0 4px;margin:1px;border-radius:3px;color:#000;font-size:11px}
 #modal,#start,#cf{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:5}
+/* Keep the start menu above the board and guarantee it is visible on fresh loads. */
+#start{z-index:2147483645!important}
 .mc{background:#1d212b;border:1px solid #555;border-radius:8px;padding:14px;max-width:640px;max-height:90vh;overflow:auto;min-width:320px}
 #cf{z-index:8}
 #toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#245;padding:8px 14px;border-radius:6px;display:none;z-index:9;max-width:70vw}
@@ -359,17 +361,3 @@ function render(){if(!G)return;renderBoard();renderCtr();renderSide();renderModa
 function toStart(){if(G&&!confirm('Leave the game?'))return;if(NET.on){NET.on=false;location.reload();return}showStart()}
 function showStart(){const s=$('start');s.style.display='flex';$('modal').style.display='none';
  let ld='';try{ld=localStorage.getItem('ptsave')?'<button onclick=loadG()>Load Saved Game</button>':''}catch(e){}
- s.innerHTML=`<div class=mc><h1 style="color:#7cf;margin-top:0">PROPERTY TYCOON</h1>Players: <select id=np onchange=startRows()>${[2,3,4,5,6,7,8].map(n=>`<option>${n}</option>`).join('')}</select><div id=rows></div><br><button class=big onclick=newGame()>New Game</button> ${ld} <button onclick="$('imp').click()">Import Save</button><hr><b>Play online (each friend on their own laptop)</b><br><input id=on placeholder="Your name" maxlength=14> <select id=ot>${TOKS.map(t=>`<option>${t}</option>`).join('')}</select> <input id=or placeholder="Room code" maxlength=8 style="width:90px"> <button class=big onclick=joinOnline()>Join / Create room</button><br><br><button onclick="$('imp2').click()">Resume a saved game online</button><br><small>Type your name exactly as in the save and a new room code, then pick the file. Friends join that room with their saved names.</small></div>`;startRows()}
-function startRows(){const n=+$('np').value;$('rows').innerHTML=Array.from({length:n},(_,i)=>`<div style="margin:4px 0"><input id=pn${i} value="Player ${i+1}" maxlength=14> <select id=pt${i}>${TOKS.map((t,k)=>`<option ${k==i?'selected':''}>${t}</option>`).join('')}</select></div>`).join('')}
-/* Creates a fresh game state with random turn order and shuffled decks */
-function newGame(L){const n=L?L.length:+$('np').value,ns=[],ts=[],cs=[];for(let i=0;i<n;i++){if(L){ns.push(L[i].name);ts.push(L[i].tok);cs.push(L[i].cid)}else{ns.push($('pn'+i).value.trim()||'Player '+(i+1));ts.push($('pt'+i).value)}}
- if(new Set(ts).size<n)return err('Each player needs a unique token.');if(new Set(ns).size<n)return err('Player names must differ.');
- const ord=shuf([...Array(n).keys()]);
- G={pl:ord.map((k,i)=>({id:i,cid:cs[k],n:ns[k],tok:ts[k],cash:1500,pos:0,jail:false,jt:0,gf:[],out:false,rp:0,rg:0})),cur:0,own:{},dk:{ch:shuf([...Array(16).keys()]),cc:shuf([...Array(16).keys()])},sup:{h:32,H:12},nx:[r6(),r6()],d:[1,1],dbl:0,phase:'roll',pend:null,qd:[],aq:[],log:[],turns:1,big:0,bigw:'',trades:0,elim:[]};
- H=[];AQ=[];syncVis();$('start').style.display='none';log('Turn order: '+G.pl.map(p=>p.tok+' '+p.n).join(' → '));showDice(G.d);render();if(L)netState(null,0,1)}
-function saveG(){try{localStorage.setItem('ptsave',JSON.stringify({G,H}));toast('Game saved.')}catch(e){err('Save failed: '+e.message)}}
-function applySave(t){try{const o=JSON.parse(t);if(!o.G||!o.G.pl)throw Error('not a valid save file');G=o.G;H=o.H||[];AQ=[];TR=null;UI.modal=null;syncVis();$('start').style.display='none';showDice(G.d);render();toast('Game loaded.')}catch(e){err('Load failed: '+e.message)}}
-function loadG(){try{applySave(localStorage.getItem('ptsave'))}catch(e){err('Load failed: '+e.message)}}
-function expG(){try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({G,H})],{type:'application/json'}));a.download='property-tycoon-save.json';a.click()}catch(e){err('Export failed: '+e.message)}}
-$('imp').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>applySave(r.result);r.onerror=()=>err('Could not read file.');r.readAsText(f);e.target.value=''};
-/* ===== CONFIRMATION PROMPTS for significant actions ===== */
